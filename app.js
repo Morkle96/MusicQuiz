@@ -3,6 +3,11 @@
 
   const STORAGE = { game: "musicQuiz.game.v2", quiz: "musicQuiz.customQuiz.v2" };
   const $ = (id) => document.getElementById(id);
+  const listen = (id, eventName, handler) => {
+    const element = $(id);
+    if (element) element.addEventListener(eventName, handler);
+    else console.warn(`Music Quiz: #${id} is unavailable. Refresh to load the latest page assets.`);
+  };
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const makeDefaultTeam = (index) => ({ name: `Team ${index + 1}`, score: 0 });
   const defaultTeams = [makeDefaultTeam(0), makeDefaultTeam(1)];
@@ -279,7 +284,9 @@
   function toast(message) { const node = $("toast"); node.textContent = message; node.classList.add("show"); window.setTimeout(() => node.classList.remove("show"), 2600); }
 
   function openEditor() {
-    stopPlayback(); editorDraft = clone(quiz); editorIndex = 0; $("editorTitle").value = editorDraft.title; $("teamCount").value = game.teams.length; renderEditorList(); loadEditorQuestion(); showView("editor");
+    stopPlayback(); editorDraft = clone(quiz); editorIndex = 0; $("editorTitle").value = editorDraft.title;
+    if ($("teamCount")) $("teamCount").value = game.teams.length;
+    renderEditorList(); loadEditorQuestion(); showView("editor");
   }
 
   const editorFields = { category: "editCategory", points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
@@ -351,14 +358,14 @@
     reader.onerror = () => { $("editorStatus").textContent = "The selected file could not be read."; }; reader.readAsText(file); $("importFile").value = "";
   }
 
-  $("playButton").addEventListener("click", togglePlay); $("stopButton").addEventListener("click", () => { stopPlayback(); setStatus("Stopped."); });
-  $("restartButton").addEventListener("click", () => playSegment()); $("revealButton").addEventListener("click", revealAnswer); $("playAnswerButton").addEventListener("click", () => playSegment("answer"));
-  $("backButton").addEventListener("click", closeQuestion); $("noPointsButton").addEventListener("click", () => finishQuestion(null, 0));
-  $("resetButton").addEventListener("click", resetGame); $("settingsButton").addEventListener("click", openEditor);
-  $("teamCount").addEventListener("change", (event) => setTeamCount(event.target.value));
-  $("editorForm").addEventListener("submit", saveEditor); $("cancelEditorButton").addEventListener("click", closeEditor); $("discardEditorButton").addEventListener("click", closeEditor);
-  $("loadEditorVideo").addEventListener("click", loadEditorVideo); $("setStartButton").addEventListener("click", () => captureTimestamp("editStart")); $("setStopButton").addEventListener("click", () => captureTimestamp("editStop"));
-  $("exportButton").addEventListener("click", exportQuiz); $("importButton").addEventListener("click", () => $("importFile").click()); $("importFile").addEventListener("change", (event) => importQuiz(event.target.files[0]));
+  listen("playButton", "click", togglePlay); listen("stopButton", "click", () => { stopPlayback(); setStatus("Stopped."); });
+  listen("restartButton", "click", () => playSegment()); listen("revealButton", "click", revealAnswer); listen("playAnswerButton", "click", () => playSegment("answer"));
+  listen("backButton", "click", closeQuestion); listen("noPointsButton", "click", () => finishQuestion(null, 0));
+  listen("resetButton", "click", resetGame); listen("settingsButton", "click", openEditor);
+  listen("teamCount", "change", (event) => setTeamCount(event.target.value));
+  listen("editorForm", "submit", saveEditor); listen("cancelEditorButton", "click", closeEditor); listen("discardEditorButton", "click", closeEditor);
+  listen("loadEditorVideo", "click", loadEditorVideo); listen("setStartButton", "click", () => captureTimestamp("editStart")); listen("setStopButton", "click", () => captureTimestamp("editStop"));
+  listen("exportButton", "click", exportQuiz); listen("importButton", "click", () => $("importFile")?.click()); listen("importFile", "change", (event) => importQuiz(event.target.files[0]));
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) || event.target.isContentEditable || !$("editorView").hidden) return;
     if (event.key === "Escape" && activeIndex !== null) closeQuestion();
