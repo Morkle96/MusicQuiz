@@ -58,6 +58,8 @@ Enable **Hidden video** on any question where the picture could reveal the answe
 
 The editor's timestamp helper can load the question's video. Play or scrub using the YouTube controls, then capture the clip start, clip stop, or reveal start. It displays both seconds and `MM:SS.s`.
 
+Pasting a valid YouTube URL in the editor automatically loads its metadata and attempts to fill **Song** and **Artist**. Titles formatted like `Artist - Song` are split automatically; otherwise the video title and channel name are used. This is best effort, so review the fields before saving—uploaders do not use one consistent naming format.
+
 ## Import and export
 
 In the editor, **Export quiz** downloads the current draft as JSON. **Import quiz** validates a previously exported JSON file and loads it into the editor; review it and press **Save quiz** to apply it. Imports require a title, one or more questions, valid categories and points, valid timestamps with stop after start, and valid YouTube URLs when supplied.

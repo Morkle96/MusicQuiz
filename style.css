@@ -143,6 +143,7 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .field.full { grid-column: 1 / -1; }
 .field input, .field textarea { width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 11px 12px; background: #0b1221; color: var(--text); resize: vertical; }
 .field input:focus, .field textarea:focus { border-color: var(--blue); outline: 0; box-shadow: 0 0 0 3px rgba(117, 167, 255, .15); }
+.field-hint { color: var(--muted); font-size: .75rem; font-weight: 500; }
 .toggle-field { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; min-height: 64px; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; background: #0b1221; cursor: pointer; }
 .toggle-field input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .toggle-track { position: relative; flex: 0 0 48px; width: 48px; height: 27px; border-radius: 20px; background: #39445a; transition: background .18s ease; }

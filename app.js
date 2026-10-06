@@ -22,12 +22,15 @@
   let editorTick = null;
   let editorDraft = null;
   let editorIndex = 0;
+  let metadataTimer = null;
+  let metadataTarget = null;
   let segmentEnd = null;
   let pendingAwards = [];
 
   window.onYouTubeIframeAPIReady = () => {
     apiReady = true;
     if (activeIndex !== null) ensureGamePlayer();
+    if (metadataTarget && editorDraft) loadEditorVideo(true);
   };
   if (window.YT && window.YT.Player) apiReady = true;
 
@@ -319,6 +322,7 @@
   }
 
   function loadEditorQuestion() {
+    if (metadataTimer !== null) window.clearTimeout(metadataTimer); metadataTimer = null; metadataTarget = null;
     const q = editorDraft.questions[editorIndex]; if (!q) return;
     Object.entries(editorFields).forEach(([key, id]) => { $(id).value = q[key] ?? ""; });
     $("editHiddenVideo").checked = q.hiddenVideo === true;
@@ -361,14 +365,61 @@
 
   function closeEditor() { destroyEditorPlayer(); editorDraft = null; showView("board"); }
 
-  function loadEditorVideo() {
+  function cleanMetadataText(value) {
+    return String(value || "").replace(/\s*[\[(](?:official\s*)?(?:music\s*)?(?:video|audio|lyric(?:s| video)?|visuali[sz]er|hd|4k)[^\])]*[\])]/gi, "").replace(/\s+/g, " ").trim();
+  }
+
+  function splitVideoMetadata(title, author) {
+    const cleanTitle = cleanMetadataText(title);
+    const cleanAuthor = String(author || "").replace(/\s+-\s+Topic$/i, "").replace(/VEVO$/i, "").trim();
+    const parts = cleanTitle.split(/\s+(?:-|–|—)\s+/);
+    if (parts.length >= 2) return { artist: parts.shift().trim(), song: parts.join(" - ").trim() };
+    return { artist: cleanAuthor, song: cleanTitle };
+  }
+
+  function readEditorMetadata(attempt = 0) {
+    if (!metadataTarget) return;
+    if (!editorPlayer?.getVideoData) {
+      metadataTarget = null; $("editorStatus").textContent = "YouTube metadata is unavailable for this video. Enter the song and artist manually."; return;
+    }
+    let data; try { data = editorPlayer.getVideoData(); } catch { data = null; }
+    if (!data?.title || (data.video_id && data.video_id !== metadataTarget.id)) {
+      if (attempt < 10) window.setTimeout(() => readEditorMetadata(attempt + 1), 250);
+      else { metadataTarget = null; $("editorStatus").textContent = "Could not read the song details automatically. Enter or review them manually."; }
+      return;
+    }
+    const target = metadataTarget; metadataTarget = null;
+    if (!editorDraft || target.index !== editorIndex || extractYouTubeId($("editYoutube").value) !== target.id) return;
+    const details = splitVideoMetadata(data.title, data.author);
+    if (details.song) $("editSong").value = details.song;
+    if (details.artist) $("editArtist").value = details.artist;
+    editorDraft.questions[editorIndex].song = $("editSong").value; editorDraft.questions[editorIndex].artist = $("editArtist").value;
+    $("editorStatus").classList.remove("error");
+    $("editorStatus").textContent = details.artist ? "Song and artist filled from YouTube metadata. Review them before saving." : "Song title filled from YouTube metadata. Add or review the artist before saving.";
+  }
+
+  function scheduleMetadataLookup() {
+    if (metadataTimer !== null) window.clearTimeout(metadataTimer);
+    metadataTimer = window.setTimeout(() => {
+      metadataTimer = null; if (!editorDraft) return; syncEditorQuestion();
+      const id = extractYouTubeId($("editYoutube").value); if (!id) return;
+      metadataTarget = { id, index: editorIndex }; loadEditorVideo(true);
+    }, 450);
+  }
+
+  function loadEditorVideo(automatic = false) {
     syncEditorQuestion(); const id = extractYouTubeId(editorDraft.questions[editorIndex].youtube);
-    if (!id) { $("editorStatus").textContent = "Enter a valid YouTube URL first."; $("editorStatus").classList.add("error"); return; }
+    if (!id) { if (!automatic) { $("editorStatus").textContent = "Enter a valid YouTube URL first."; $("editorStatus").classList.add("error"); } return; }
     if (!apiReady) { $("editorStatus").textContent = "The YouTube API is still loading. Check your connection and try again."; return; }
     $("editorStatus").classList.remove("error");
-    if (!editorPlayer) editorPlayer = new YT.Player("editorYoutubePlayer", { height: "315", width: "560", videoId: id, playerVars: { playsinline: 1, rel: 0 }, events: { onError: (event) => { $("editorStatus").textContent = `YouTube player error ${event.data}. The video may be unavailable or blocked from embedding.`; } } });
+    if (!editorPlayer) editorPlayer = new YT.Player("editorYoutubePlayer", { height: "315", width: "560", videoId: id, playerVars: { playsinline: 1, rel: 0 }, events: {
+      onReady: () => readEditorMetadata(),
+      onStateChange: (event) => { if ([YT.PlayerState.CUED, YT.PlayerState.PLAYING, YT.PlayerState.PAUSED].includes(event.data)) readEditorMetadata(); },
+      onError: (event) => { metadataTarget = null; $("editorStatus").textContent = `YouTube player error ${event.data}. The video may be unavailable or blocked from embedding.`; }
+    } });
     else editorPlayer.cueVideoById(id);
-    $("editorStatus").textContent = "Video loaded. Use the YouTube controls to find your timestamps.";
+    $("editorStatus").textContent = automatic ? "Reading song details from YouTube…" : "Video loaded. Use the YouTube controls to find your timestamps.";
+    if (metadataTarget) window.setTimeout(() => readEditorMetadata(), 300);
     if (editorTick !== null) window.clearInterval(editorTick);
     editorTick = window.setInterval(() => { if (editorPlayer?.getCurrentTime) updateTimestampReadout(editorPlayer.getCurrentTime()); }, 200);
   }
@@ -379,6 +430,7 @@
     const value = Math.round(editorPlayer.getCurrentTime() * 10) / 10; $(field).value = formatTimestamp(value); updateTimestampReadout(value); syncEditorQuestion();
   }
   function destroyEditorPlayer() {
+    if (metadataTimer !== null) window.clearTimeout(metadataTimer); metadataTimer = null; metadataTarget = null;
     if (editorTick !== null) window.clearInterval(editorTick); editorTick = null;
     if (editorPlayer?.destroy) editorPlayer.destroy(); editorPlayer = null;
     const stage = document.querySelector(".editor-player");
@@ -403,7 +455,7 @@
   listen("resetButton", "click", resetGame); listen("settingsButton", "click", openEditor);
   listen("teamCount", "change", (event) => setTeamCount(event.target.value));
   listen("editorForm", "submit", saveEditor); listen("cancelEditorButton", "click", closeEditor); listen("discardEditorButton", "click", closeEditor);
-  listen("loadEditorVideo", "click", loadEditorVideo); listen("setStartButton", "click", () => captureTimestamp("editStart")); listen("setStopButton", "click", () => captureTimestamp("editStop")); listen("setRevealStartButton", "click", () => captureTimestamp("editRevealStart"));
+  listen("loadEditorVideo", "click", () => loadEditorVideo(false)); listen("editYoutube", "input", scheduleMetadataLookup); listen("setStartButton", "click", () => captureTimestamp("editStart")); listen("setStopButton", "click", () => captureTimestamp("editStop")); listen("setRevealStartButton", "click", () => captureTimestamp("editRevealStart"));
   listen("exportButton", "click", exportQuiz); listen("importButton", "click", () => $("importFile")?.click()); listen("importFile", "change", (event) => importQuiz(event.target.files[0]));
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) || event.target.isContentEditable || !$("editorView").hidden) return;
