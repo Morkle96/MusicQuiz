@@ -1,0 +1,9 @@
+{
+  "quizzes": [
+    {
+      "name": "Weekend Music Quiz",
+      "file": "default_save.json",
+      "default": true
+    }
+  ]
+}

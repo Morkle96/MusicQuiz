@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070b16">
   <title>Weekend Music Quiz</title>
-  <link rel="stylesheet" href="style.css?v=20261006-11">
+  <link rel="stylesheet" href="style.css?v=20261006-12">
 </head>
 <body>
   <div class="app-shell">
@@ -29,7 +29,7 @@
         <div class="editor-header"><div><p class="kicker">Host settings</p><h2>Quiz editor</h2><p>Edit the quiz without touching the source code.</p></div><button class="button ghost" id="cancelEditorButton" type="button">Close</button></div>
         <div class="game-settings"><div><strong>Game settings</strong><p>Choose how many teams are playing or start the game over.</p></div><label class="field team-count-field"><span>Number of teams</span><input id="teamCount" type="number" min="1" max="8" step="1"></label><button class="button danger" id="resetButton" type="button">Reset game</button></div>
         <form id="editorForm">
-          <div class="editor-toolbar"><label class="field grow"><span>Quiz title</span><input id="editorTitle" required></label><button class="button" id="importButton" type="button">Import quiz</button><button class="button" id="exportButton" type="button">Export quiz</button><input id="importFile" type="file" accept="application/json,.json" hidden></div>
+          <div class="editor-toolbar"><label class="field grow"><span>Quiz title</span><input id="editorTitle" required></label><div class="library-picker"><label for="quizLibrarySelect">Saved quizzes</label><select id="quizLibrarySelect"><option value="">Choose a quiz…</option></select></div><button class="button" id="loadLibraryQuizButton" type="button">Load saved quiz</button><button class="button" id="importButton" type="button">Import quiz</button><button class="button" id="exportButton" type="button">Export quiz</button><input id="importFile" type="file" accept="application/json,.json" hidden></div>
           <div class="editor-layout">
             <aside class="question-list" id="editorQuestionList"></aside>
             <div class="question-editor" id="questionEditor">
@@ -48,6 +48,6 @@
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://www.youtube.com/iframe_api"></script><script src="quiz-data.js?v=20261006-11"></script><script src="app.js?v=20261006-11"></script>
+  <script src="https://www.youtube.com/iframe_api"></script><script src="quiz-data.js?v=20261006-12"></script><script src="app.js?v=20261006-12"></script>
 </body>
 </html>

@@ -11,8 +11,9 @@
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const makeDefaultTeam = (index) => ({ name: `Team ${index + 1}`, score: 0 });
   const defaultTeams = [makeDefaultTeam(0), makeDefaultTeam(1)];
-  let quiz = normalizeQuiz(loadCustomQuiz() || clone(QUIZ));
-  let game = loadGame();
+  let quiz = normalizeQuiz(clone(QUIZ));
+  let game = { teams: clone(defaultTeams), completed: [], signature: "" };
+  let quizLibrary = [];
   let activeIndex = null;
   let answerRevealed = false;
   let player = null;
@@ -112,6 +113,44 @@
   function loadCustomQuiz() {
     try { const value = JSON.parse(localStorage.getItem(STORAGE.quiz)); return validateQuiz(value) ? null : normalizeQuiz(value); }
     catch { return null; }
+  }
+
+  async function fetchQuizJson(url) {
+    const response = await fetch(url, { cache: "no-cache" });
+    if (!response.ok) throw new Error(`Could not load ${url} (${response.status}).`);
+    const data = await response.json(); const error = validateQuiz(data);
+    if (error) throw new Error(error); return normalizeQuiz(data);
+  }
+
+  function libraryQuizUrl(file) {
+    const libraryRoot = new URL("quizzes/", document.baseURI); const url = new URL(String(file || ""), libraryRoot);
+    if (url.origin !== libraryRoot.origin || !url.pathname.startsWith(libraryRoot.pathname)) throw new Error("The quiz library contains an invalid file path.");
+    return url.href;
+  }
+
+  async function loadQuizLibrary() {
+    try {
+      const response = await fetch("quizzes/manifest.json", { cache: "no-cache" });
+      if (!response.ok) throw new Error(`Manifest returned ${response.status}.`);
+      const manifest = await response.json(); const entries = Array.isArray(manifest) ? manifest : manifest.quizzes;
+      quizLibrary = Array.isArray(entries) ? entries.filter((entry) => entry && entry.name && entry.file) : [];
+    } catch (error) { quizLibrary = []; console.warn("Music Quiz: quiz library could not be loaded.", error); }
+    populateQuizLibrary();
+  }
+
+  function populateQuizLibrary() {
+    const select = $("quizLibrarySelect"); if (!select) return;
+    select.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: quizLibrary.length ? "Choose a quiz…" : "No saved quizzes found" }));
+    quizLibrary.forEach((entry, index) => { const option = document.createElement("option"); option.value = String(index); option.textContent = entry.name; select.append(option); });
+  }
+
+  async function loadSelectedLibraryQuiz() {
+    const selectedValue = $("quizLibrarySelect").value; const entry = selectedValue === "" ? null : quizLibrary[Number(selectedValue)];
+    if (!entry) { $("editorStatus").textContent = "Choose a saved quiz first."; return; }
+    try {
+      const loadedQuiz = await fetchQuizJson(libraryQuizUrl(entry.file)); destroyEditorPlayer(); editorDraft = loadedQuiz; editorIndex = 0;
+      $("editorTitle").value = editorDraft.title; renderEditorList(); loadEditorQuestion(); toast(`${entry.name} loaded. Press Save quiz to apply it.`);
+    } catch (error) { $("editorStatus").classList.add("error"); $("editorStatus").textContent = `Could not load saved quiz: ${error.message}`; }
   }
 
   function quizSignature() {
@@ -309,7 +348,7 @@
   function openEditor() {
     stopPlayback(); editorDraft = clone(quiz); editorIndex = 0; $("editorTitle").value = editorDraft.title;
     if ($("teamCount")) $("teamCount").value = game.teams.length;
-    renderEditorList(); loadEditorQuestion(); showView("editor");
+    populateQuizLibrary(); renderEditorList(); loadEditorQuestion(); showView("editor");
   }
 
   const editorFields = { points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", revealStart: "editRevealStart", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
@@ -457,6 +496,7 @@
   listen("editorForm", "submit", saveEditor); listen("cancelEditorButton", "click", closeEditor); listen("discardEditorButton", "click", closeEditor);
   listen("loadEditorVideo", "click", () => loadEditorVideo(false)); listen("editYoutube", "input", scheduleMetadataLookup); listen("setStartButton", "click", () => captureTimestamp("editStart")); listen("setStopButton", "click", () => captureTimestamp("editStop")); listen("setRevealStartButton", "click", () => captureTimestamp("editRevealStart"));
   listen("exportButton", "click", exportQuiz); listen("importButton", "click", () => $("importFile")?.click()); listen("importFile", "change", (event) => importQuiz(event.target.files[0]));
+  listen("loadLibraryQuizButton", "click", loadSelectedLibraryQuiz);
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) || event.target.isContentEditable || !$("editorView").hidden) return;
     if (event.key === "Escape" && activeIndex !== null) closeQuestion();
@@ -467,5 +507,18 @@
   });
   window.addEventListener("beforeunload", () => { stopPlayback(); destroyEditorPlayer(); });
 
-  render(); showView("board");
+  async function initialize() {
+    const customQuiz = loadCustomQuiz(); await loadQuizLibrary();
+    if (customQuiz) quiz = normalizeQuiz(customQuiz);
+    else {
+      const defaultEntry = quizLibrary.find((entry) => entry.default === true) || quizLibrary[0];
+      if (defaultEntry) {
+        try { quiz = await fetchQuizJson(libraryQuizUrl(defaultEntry.file)); }
+        catch (error) { console.warn("Music Quiz: default save could not be loaded; using quiz-data.js.", error); quiz = normalizeQuiz(clone(QUIZ)); }
+      }
+    }
+    game = loadGame(); render(); showView("board");
+  }
+
+  initialize();
 })();

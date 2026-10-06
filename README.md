@@ -64,6 +64,21 @@ Pasting a valid YouTube URL in the editor automatically loads its metadata and a
 
 In the editor, **Export quiz** downloads the current draft as JSON. **Import quiz** validates a previously exported JSON file and loads it into the editor; review it and press **Save quiz** to apply it. Imports require a title, one or more questions, valid categories and points, valid timestamps with stop after start, and valid YouTube URLs when supplied.
 
+### Bundled quiz library
+
+The `quizzes/` folder contains quizzes that ship with the website. They appear in the **Saved quizzes** dropdown in Game Settings. Choose one, press **Load saved quiz**, review it, and press **Save quiz** to apply it. The normal **Import quiz** button remains available for files elsewhere on the computer.
+
+GitHub Pages cannot discover files in a folder automatically, so add every bundled JSON file to `quizzes/manifest.json`:
+
+```json
+{
+  "name": "Summer Party Quiz",
+  "file": "summer-party.json"
+}
+```
+
+Mark one entry with `"default": true`. That quiz loads automatically when the browser has no editor-saved quiz. A quiz saved in local storage always takes priority over the bundled default.
+
 ## First Words and Finish the Lyrics
 
 For **First Words**, make the normal clip end immediately before the opening vocal. For **Finish the Lyrics**, end immediately before the lyric contestants must continue. Set `revealStart` where the answer begins. Revealing the answer immediately plays from that point for `answerPlaybackDuration` seconds (8 by default); **Play answer** repeats it.
