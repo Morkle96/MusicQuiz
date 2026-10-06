@@ -25,6 +25,7 @@
   let editorIndex = 0;
   let metadataTimer = null;
   let metadataTarget = null;
+  let segmentStart = null;
   let segmentEnd = null;
   let pendingAwards = [];
 
@@ -218,7 +219,7 @@
 
   function openQuestion(index) {
     stopPlayback(); activeIndex = index; answerRevealed = false; pendingAwards = game.teams.map(() => 0);
-    const q = quiz.questions[index]; const { start, stop } = questionTimes(q);
+    const q = quiz.questions[index]; const { start, stop } = questionTimes(q); updateClipProgress(start, start, stop);
     const questionNumber = quiz.questions.filter((item, itemIndex) => item.category === q.category && itemIndex <= index).length;
     $("questionCategory").textContent = q.category; $("questionPoints").textContent = `Question ${questionNumber}`;
     $("questionPrompt").textContent = q.question || "Listen to the music clip.";
@@ -265,10 +266,19 @@
   }
 
   function startMonitor(stopAt) {
-    clearMonitor(); monitor = window.setInterval(() => {
+    clearMonitor();
+    const update = () => {
       if (!player || typeof player.getCurrentTime !== "function") return;
-      if (player.getCurrentTime() >= stopAt) { player.pauseVideo(); clearMonitor(); setStatus("Clip stopped at the configured cutoff."); }
-    }, 75);
+      const current = player.getCurrentTime(); updateClipProgress(current, segmentStart, stopAt);
+      if (current >= stopAt) { updateClipProgress(stopAt, segmentStart, stopAt); player.pauseVideo(); clearMonitor(); setStatus("Clip stopped at the configured cutoff."); }
+    };
+    update(); monitor = window.setInterval(update, 75);
+  }
+
+  function updateClipProgress(current, start, end) {
+    const safeStart = Number(start) || 0, safeEnd = Number(end) || safeStart, duration = Math.max(0, safeEnd - safeStart);
+    const elapsed = Math.min(duration, Math.max(0, (Number(current) || 0) - safeStart)); const percent = duration ? elapsed / duration * 100 : 0;
+    $("progressFill").style.width = `${percent}%`; $("progressTime").textContent = formatTimestamp(Math.max(0, duration - elapsed));
   }
 
   function clearMonitor() { if (monitor !== null) window.clearInterval(monitor); monitor = null; }
@@ -276,7 +286,7 @@
     $("playButton").textContent = isPlaying ? "Ⅱ" : "▶";
     $("playButton").setAttribute("aria-label", isPlaying ? "Pause clip" : "Play clip");
   }
-  function stopPlayback() { clearMonitor(); segmentEnd = null; if (player && typeof player.pauseVideo === "function") player.pauseVideo(); setPlayButton(false); }
+  function stopPlayback() { clearMonitor(); segmentStart = null; segmentEnd = null; if (player && typeof player.pauseVideo === "function") player.pauseVideo(); setPlayButton(false); }
 
   function playSegment(mode = "clip") {
     if (activeIndex === null) return;
@@ -287,7 +297,7 @@
     $("playerCard").classList.remove("awaiting-play");
     const start = mode === "answer" ? times.revealStart : times.start;
     const end = mode === "answer" ? times.revealStart + (Number(q.answerPlaybackDuration) || 8) : times.stop;
-    segmentEnd = end; clearMonitor(); player.loadVideoById({ videoId: id, startSeconds: start }); player.playVideo();
+    segmentStart = start; segmentEnd = end; updateClipProgress(start, start, end); clearMonitor(); player.loadVideoById({ videoId: id, startSeconds: start }); player.playVideo();
     setStatus(mode === "answer" ? `Playing the answer from ${formatTimestamp(start)} for about ${q.answerPlaybackDuration || 8} seconds.` : `Playing ${formatTimestamp(start)} → ${formatTimestamp(end)}.`);
   }
 
@@ -298,7 +308,7 @@
     const times = q ? questionTimes(q) : null;
     const current = Number(player.getCurrentTime());
     if (times && current >= times.start && current < times.stop) {
-      $("playerCard").classList.remove("awaiting-play"); segmentEnd = times.stop; player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
+      $("playerCard").classList.remove("awaiting-play"); segmentStart = times.start; segmentEnd = times.stop; player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
     } else playSegment();
   }
 

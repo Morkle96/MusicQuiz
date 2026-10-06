@@ -58,6 +58,8 @@ Enable **Hidden video** on any question where the picture could reveal the answe
 
 Every question first displays a **Ready?** splash screen so the YouTube frame cannot reveal anything before the host starts the clip. It fades away when playback begins. If **Hidden video** is enabled, the hidden-video cover remains underneath until the answer is revealed.
 
+During playback, the bottom control bar includes a visible countdown and a progress bar that fills from the configured clip start to its stop time. It pauses and resumes with the player, resets on restart, and also tracks the answer segment after Reveal.
+
 The editor's timestamp helper can load the question's video. Play or scrub using the YouTube controls, then capture the clip start, clip stop, or reveal start. It displays both seconds and `MM:SS.s`.
 
 Pasting a valid YouTube URL in the editor automatically loads its metadata and attempts to fill **Song** and **Artist**. Titles formatted like `Artist - Song` are split automatically; otherwise the video title and channel name are used. This is best effort, so review the fields before saving—uploaders do not use one consistent naming format.

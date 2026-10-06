@@ -91,7 +91,11 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .clip-details { display: flex; justify-content: space-between; gap: 16px; width: min(100%, 1400px); min-height: 22px; margin: 9px auto 0; color: var(--muted); font-size: .82rem; }
 .status { margin: 0; color: var(--muted); font-size: .82rem; text-align: right; }
 .status.error { color: var(--red); }
-.primary-controls { position: absolute; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; align-items: center; min-height: 92px; padding: 12px 28px 10px; background: linear-gradient(to top, #000 0, #000 40px, rgba(0, 0, 0, .92) 56px, rgba(0, 0, 0, .5) 72px, transparent 92px); pointer-events: auto; }
+.primary-controls { position: absolute; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; align-items: flex-end; min-height: 108px; padding: 32px 28px 10px; background: linear-gradient(to top, #000 0, #000 40px, rgba(0, 0, 0, .92) 68px, rgba(0, 0, 0, .5) 88px, transparent 108px); pointer-events: auto; }
+.clip-progress { position: absolute; top: 18px; right: 28px; left: 28px; display: flex; align-items: center; gap: 12px; color: #fff; font-size: .78rem; font-variant-numeric: tabular-nums; font-weight: 800; }
+.progress-track { flex: 1; height: 7px; overflow: hidden; border-radius: 10px; background: rgba(255, 255, 255, .22); box-shadow: 0 1px 5px rgba(0, 0, 0, .5); }
+.progress-fill { width: 0; height: 100%; border-radius: inherit; background: var(--gold); transition: width .075s linear; }
+.clip-progress span { min-width: 38px; text-align: right; text-shadow: 0 1px 5px #000; }
 .transport-controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
 .transport-button { display: grid; place-items: center; width: 48px; height: 48px; border: 0; border-radius: 50%; padding: 0; background: transparent; color: #c6cede; font-size: 1.65rem; cursor: pointer; transition: color .15s ease, transform .15s ease, background .15s ease; }
 .transport-button:hover { color: #fff; transform: scale(1.08); }
@@ -195,7 +199,8 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
   .team-card { min-height: 74px; }
   .form-grid { grid-template-columns: 1fr; }
   .field.full { grid-column: auto; }
-  .primary-controls { min-height: 82px; padding: 9px 14px 7px; background: linear-gradient(to top, #000 0, #000 36px, rgba(0, 0, 0, .9) 50px, rgba(0, 0, 0, .45) 65px, transparent 82px); }
+  .primary-controls { min-height: 98px; padding: 29px 14px 7px; background: linear-gradient(to top, #000 0, #000 36px, rgba(0, 0, 0, .9) 62px, rgba(0, 0, 0, .45) 80px, transparent 98px); }
+  .clip-progress { top: 15px; right: 14px; left: 14px; }
   .transport-controls { gap: 12px; }
   .transport-button { width: 42px; height: 42px; }
   .transport-main { width: 58px; height: 58px; }
