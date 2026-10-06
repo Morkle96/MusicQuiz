@@ -1,0 +1,357 @@
+(() => {
+  "use strict";
+
+  const STORAGE = { game: "musicQuiz.game.v2", quiz: "musicQuiz.customQuiz.v2" };
+  const $ = (id) => document.getElementById(id);
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const defaultTeams = [{ name: "Team 1", score: 0 }, { name: "Team 2", score: 0 }];
+  let quiz = loadCustomQuiz() || clone(QUIZ);
+  let game = loadGame();
+  let activeIndex = null;
+  let answerRevealed = false;
+  let player = null;
+  let editorPlayer = null;
+  let apiReady = false;
+  let monitor = null;
+  let editorTick = null;
+  let editorDraft = null;
+  let editorIndex = 0;
+
+  window.onYouTubeIframeAPIReady = () => {
+    apiReady = true;
+    if (activeIndex !== null) ensureGamePlayer();
+  };
+  if (window.YT && window.YT.Player) apiReady = true;
+
+  function parseTimestamp(value) {
+    if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : NaN;
+    const input = String(value ?? "").trim();
+    if (!input) return 0;
+    if (/^\d+(\.\d+)?$/.test(input)) return Number(input);
+    const parts = input.split(":");
+    if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+(\.\d+)?$/.test(part))) return NaN;
+    let seconds = 0;
+    for (const part of parts) seconds = seconds * 60 + Number(part);
+    return seconds;
+  }
+
+  function formatTimestamp(value) {
+    const total = Math.max(0, Number(value) || 0);
+    const minutes = Math.floor(total / 60);
+    const seconds = total - minutes * 60;
+    const formatted = seconds.toFixed(seconds % 1 ? 1 : 0).padStart(seconds < 10 ? 2 : 1, "0");
+    return `${minutes}:${formatted}`;
+  }
+
+  function extractYouTubeId(input) {
+    const raw = String(input || "").trim();
+    if (/^[\w-]{11}$/.test(raw)) return raw;
+    try {
+      const url = new URL(raw);
+      const host = url.hostname.replace(/^www\./, "");
+      let id = "";
+      if (host === "youtu.be") id = url.pathname.split("/").filter(Boolean)[0] || "";
+      if (["youtube.com", "m.youtube.com", "music.youtube.com", "youtube-nocookie.com"].includes(host)) {
+        if (url.pathname === "/watch") id = url.searchParams.get("v") || "";
+        else if (/^\/(shorts|embed)\//.test(url.pathname)) id = url.pathname.split("/")[2] || "";
+      }
+      return /^[\w-]{11}$/.test(id) ? id : null;
+    } catch { return null; }
+  }
+
+  function normalizeQuiz(data) {
+    const normalized = clone(data);
+    normalized.title = String(normalized.title || "Music Quiz").trim();
+    normalized.questions = normalized.questions.map((q) => ({
+      category: String(q.category || "Uncategorized").trim(),
+      points: Number(q.points), youtube: String(q.youtube || "").trim(),
+      start: q.start ?? 0, stop: q.stop ?? 10,
+      question: String(q.question || "Listen to the music clip."),
+      answer: String(q.answer || ""), song: String(q.song || ""), artist: String(q.artist || ""),
+      answerPlaybackDuration: Number(q.answerPlaybackDuration) || 8
+    }));
+    normalized.categories = [...new Set([
+      ...(Array.isArray(normalized.categories) ? normalized.categories.map(String) : []),
+      ...normalized.questions.map((q) => q.category)
+    ])].filter(Boolean);
+    return normalized;
+  }
+
+  function validateQuiz(data) {
+    if (!data || typeof data !== "object") return "The file does not contain a quiz object.";
+    if (typeof data.title !== "string" || !data.title.trim()) return "The quiz needs a title.";
+    if (!Array.isArray(data.questions) || !data.questions.length) return "The quiz needs at least one question.";
+    for (let i = 0; i < data.questions.length; i += 1) {
+      const q = data.questions[i];
+      if (!q || typeof q !== "object" || !String(q.category || "").trim()) return `Question ${i + 1} needs a category.`;
+      if (!Number.isFinite(Number(q.points)) || Number(q.points) < 0) return `Question ${i + 1} has invalid points.`;
+      const start = parseTimestamp(q.start), stop = parseTimestamp(q.stop);
+      if (!Number.isFinite(start) || !Number.isFinite(stop) || stop <= start) return `Question ${i + 1} needs a valid stop time after its start time.`;
+      if (q.youtube && !extractYouTubeId(q.youtube)) return `Question ${i + 1} has an invalid YouTube URL.`;
+    }
+    return null;
+  }
+
+  function loadCustomQuiz() {
+    try { const value = JSON.parse(localStorage.getItem(STORAGE.quiz)); return validateQuiz(value) ? null : normalizeQuiz(value); }
+    catch { return null; }
+  }
+
+  function quizSignature() {
+    return JSON.stringify(quiz.questions.map((q) => [q.category, q.points, q.youtube, q.start, q.stop]));
+  }
+
+  function loadGame() {
+    const fallback = { teams: clone(defaultTeams), completed: [], signature: "" };
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE.game));
+      if (!saved || !Array.isArray(saved.teams)) return fallback;
+      saved.teams = saved.teams.slice(0, 2).map((team, i) => ({ name: String(team.name || `Team ${i + 1}`), score: Number(team.score) || 0 }));
+      while (saved.teams.length < 2) saved.teams.push(clone(defaultTeams[saved.teams.length]));
+      saved.completed = saved.signature === quizSignature() && Array.isArray(saved.completed) ? saved.completed : [];
+      saved.signature = quizSignature();
+      return saved;
+    } catch { return fallback; }
+  }
+
+  function saveGame() {
+    game.signature = quizSignature();
+    localStorage.setItem(STORAGE.game, JSON.stringify(game));
+  }
+
+  function render() {
+    document.title = quiz.title;
+    $("quizTitle").textContent = quiz.title;
+    $("quizSubtitle").textContent = `${quiz.categories.length} categories · ${quiz.questions.length} questions`;
+    renderTeams(); renderBoard();
+  }
+
+  function renderTeams() {
+    $("teams").replaceChildren(...game.teams.map((team, index) => {
+      const card = document.createElement("div"); card.className = "team-card";
+      const input = document.createElement("input"); input.value = team.name; input.setAttribute("aria-label", `Team ${index + 1} name`);
+      input.addEventListener("input", () => { game.teams[index].name = input.value; saveGame(); renderScoreButtons(); });
+      const score = document.createElement("strong"); score.textContent = team.score;
+      card.append(input, score); return card;
+    }));
+  }
+
+  function renderBoard() {
+    const board = $("board"); board.replaceChildren();
+    board.style.setProperty("--columns", quiz.categories.length);
+    quiz.categories.forEach((category) => { const header = document.createElement("div"); header.className = "category-header"; header.textContent = category; board.append(header); });
+    const values = [...new Set(quiz.questions.map((q) => Number(q.points)))].sort((a, b) => a - b);
+    values.forEach((points) => quiz.categories.forEach((category) => {
+      const index = quiz.questions.findIndex((q) => q.category === category && Number(q.points) === points);
+      if (index < 0) { const gap = document.createElement("div"); gap.className = "tile gap"; board.append(gap); return; }
+      const button = document.createElement("button"); const completed = game.completed.includes(index);
+      button.type = "button"; button.className = "tile"; button.disabled = completed;
+      button.textContent = completed ? "✓" : points; button.setAttribute("aria-label", `${category} for ${points} points${completed ? ", completed" : ""}`);
+      button.addEventListener("click", () => openQuestion(index)); board.append(button);
+    }));
+  }
+
+  function showView(name) {
+    $("boardView").hidden = name !== "board"; $("questionView").hidden = name !== "question"; $("editorView").hidden = name !== "editor";
+    document.body.classList.toggle("editor-open", name === "editor"); window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function questionTimes(q) { return { start: parseTimestamp(q.start), stop: parseTimestamp(q.stop) }; }
+
+  function openQuestion(index) {
+    stopPlayback(); activeIndex = index; answerRevealed = false;
+    const q = quiz.questions[index]; const { start, stop } = questionTimes(q);
+    $("questionCategory").textContent = q.category; $("questionPoints").textContent = `${q.points} points`;
+    $("questionPrompt").textContent = q.question || "Listen to the music clip.";
+    $("questionInstruction").textContent = q.category === "First Words" ? "Listen to the intro, then guess the first words sung." : q.category === "Finish the Lyrics" ? "Continue the lyric after the clip stops." : "Listen carefully and give your answer.";
+    $("clipRange").textContent = Number.isFinite(start) && Number.isFinite(stop) ? `${formatTimestamp(start)} → ${formatTimestamp(stop)}` : "Timestamps need attention";
+    $("answerLabel").textContent = q.category === "First Words" ? "First words" : "Answer";
+    $("answerText").textContent = q.answer || "No answer configured";
+    $("songInfo").textContent = [q.artist, q.song].filter(Boolean).join(" — ") || "No song details configured";
+    $("answerCard").hidden = true; $("revealButton").hidden = false; $("playerCard").classList.remove("video-visible");
+    $("showVideoButton").textContent = "Show video"; setStatus(questionWarning(q)); renderScoreButtons(); showView("question"); ensureGamePlayer();
+  }
+
+  function questionWarning(q) {
+    if (!q.youtube) return "No YouTube URL configured. Open the quiz editor to add one.";
+    if (!extractYouTubeId(q.youtube)) return "This question has an invalid YouTube URL.";
+    const { start, stop } = questionTimes(q);
+    if (!Number.isFinite(start) || !Number.isFinite(stop) || stop <= start) return "The stop time must be later than the start time.";
+    return "Ready.";
+  }
+
+  function setStatus(message, error = false) { $("playerStatus").textContent = message; $("playerStatus").classList.toggle("error", error); }
+
+  function ensureGamePlayer() {
+    if (!apiReady || activeIndex === null) { if (!apiReady) setStatus("Loading the YouTube player…"); return; }
+    const id = extractYouTubeId(quiz.questions[activeIndex].youtube); if (!id) return;
+    if (!player) {
+      player = new YT.Player("youtubePlayer", { height: "360", width: "640", videoId: id, playerVars: { playsinline: 1, rel: 0 }, events: {
+        onReady: () => setStatus("Ready."), onError: handlePlayerError,
+        onStateChange: (event) => { if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) clearMonitor(); }
+      }});
+    } else { player.cueVideoById(id); setStatus("Ready."); }
+  }
+
+  function handlePlayerError(event) {
+    const messages = { 2: "The YouTube URL is invalid.", 5: "This video cannot play in the HTML5 player.", 100: "This video is private, removed, or unavailable.", 101: "The owner does not allow this video to be embedded.", 150: "The owner does not allow this video to be embedded." };
+    setStatus(messages[event.data] || "YouTube could not play this video.", true); clearMonitor();
+  }
+
+  function startMonitor(stopAt) {
+    clearMonitor(); monitor = window.setInterval(() => {
+      if (!player || typeof player.getCurrentTime !== "function") return;
+      if (player.getCurrentTime() >= stopAt) { player.pauseVideo(); clearMonitor(); setStatus("Clip stopped at the configured cutoff."); }
+    }, 75);
+  }
+
+  function clearMonitor() { if (monitor !== null) window.clearInterval(monitor); monitor = null; }
+  function stopPlayback() { clearMonitor(); if (player && typeof player.pauseVideo === "function") player.pauseVideo(); }
+
+  function playSegment(mode = "clip") {
+    if (activeIndex === null) return;
+    const q = quiz.questions[activeIndex], id = extractYouTubeId(q.youtube), times = questionTimes(q);
+    if (!id || !Number.isFinite(times.start) || !Number.isFinite(times.stop) || times.stop <= times.start) { setStatus(questionWarning(q), true); return; }
+    if (!apiReady) { setStatus("The YouTube API is still loading. Check your connection and try again.", true); return; }
+    if (!player || typeof player.loadVideoById !== "function") { ensureGamePlayer(); setStatus("Preparing the player…"); return; }
+    const start = mode === "answer" ? times.stop : times.start;
+    const end = mode === "answer" ? times.stop + (Number(q.answerPlaybackDuration) || 8) : times.stop;
+    player.loadVideoById({ videoId: id, startSeconds: start }); player.playVideo(); startMonitor(end);
+    setStatus(mode === "answer" ? `Playing the answer from ${formatTimestamp(start)} for about ${q.answerPlaybackDuration || 8} seconds.` : `Playing ${formatTimestamp(start)} → ${formatTimestamp(end)}.`);
+  }
+
+  function togglePlay() {
+    if (!player || !window.YT) return playSegment();
+    if (player.getPlayerState() === YT.PlayerState.PLAYING) { stopPlayback(); setStatus("Paused."); return; }
+    const q = activeIndex === null ? null : quiz.questions[activeIndex];
+    const times = q ? questionTimes(q) : null;
+    const current = Number(player.getCurrentTime());
+    if (times && current >= times.start && current < times.stop) {
+      player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
+    } else playSegment();
+  }
+
+  function revealAnswer() {
+    if (activeIndex === null || answerRevealed) return; answerRevealed = true;
+    $("answerCard").hidden = false; $("revealButton").hidden = true; $("answerCard").classList.add("reveal");
+    window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450); $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function renderScoreButtons() {
+    if (activeIndex === null) return; const value = Number(quiz.questions[activeIndex].points) || 0; const holder = $("scoreButtons"); holder.replaceChildren();
+    game.teams.forEach((team, index) => {
+      [[1, "+", "positive"], [-1, "−", "negative"]].forEach(([sign, symbol, className]) => {
+        const button = document.createElement("button"); button.type = "button"; button.className = `button score-action ${className}`;
+        button.textContent = `${team.name || `Team ${index + 1}`} ${symbol}${value}`; button.addEventListener("click", () => finishQuestion(index, sign)); holder.append(button);
+      });
+    });
+  }
+
+  function finishQuestion(teamIndex, sign) {
+    if (activeIndex === null) return;
+    if (teamIndex !== null) game.teams[teamIndex].score += Number(quiz.questions[activeIndex].points) * sign;
+    if (!game.completed.includes(activeIndex)) game.completed.push(activeIndex); saveGame(); closeQuestion(); render();
+  }
+
+  function closeQuestion() { stopPlayback(); activeIndex = null; answerRevealed = false; showView("board"); }
+
+  function resetGame() {
+    if (!window.confirm("Reset team names, scores, and every completed question?")) return;
+    stopPlayback(); localStorage.removeItem(STORAGE.game); game = { teams: clone(defaultTeams), completed: [], signature: quizSignature() }; activeIndex = null; render(); showView("board"); toast("Game reset.");
+  }
+
+  function toast(message) { const node = $("toast"); node.textContent = message; node.classList.add("show"); window.setTimeout(() => node.classList.remove("show"), 2600); }
+
+  function openEditor() {
+    stopPlayback(); editorDraft = clone(quiz); editorIndex = 0; $("editorTitle").value = editorDraft.title; renderEditorList(); loadEditorQuestion(); showView("editor");
+  }
+
+  const editorFields = { category: "editCategory", points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
+  function syncEditorQuestion() {
+    if (!editorDraft?.questions[editorIndex]) return;
+    const q = editorDraft.questions[editorIndex]; Object.entries(editorFields).forEach(([key, id]) => { q[key] = key === "points" || key === "answerPlaybackDuration" ? Number($(id).value) : $(id).value; });
+    editorDraft.title = $("editorTitle").value;
+  }
+
+  function loadEditorQuestion() {
+    const q = editorDraft.questions[editorIndex]; if (!q) return;
+    Object.entries(editorFields).forEach(([key, id]) => { $(id).value = q[key] ?? ""; });
+    $("editorStatus").textContent = ""; $("editorStatus").classList.remove("error"); updateTimestampReadout(0);
+    [...$("editorQuestionList").children].forEach((node, i) => node.classList.toggle("selected", i === editorIndex));
+  }
+
+  function renderEditorList() {
+    const list = $("editorQuestionList"); list.replaceChildren(...editorDraft.questions.map((q, index) => {
+      const button = document.createElement("button"); button.type = "button"; button.className = "editor-question";
+      button.innerHTML = `<span>${escapeHtml(q.category)}</span><strong>${Number(q.points) || 0}</strong>`;
+      button.addEventListener("click", () => { syncEditorQuestion(); editorIndex = index; renderEditorList(); loadEditorQuestion(); }); return button;
+    }));
+  }
+
+  function escapeHtml(value) { const node = document.createElement("span"); node.textContent = String(value); return node.innerHTML; }
+
+  function saveEditor(event) {
+    event.preventDefault(); syncEditorQuestion(); editorDraft.categories = [...new Set(editorDraft.questions.map((q) => String(q.category).trim()))].filter(Boolean);
+    const error = validateQuiz(editorDraft); if (error) { $("editorStatus").textContent = error; $("editorStatus").classList.add("error"); return; }
+    quiz = normalizeQuiz(editorDraft); localStorage.setItem(STORAGE.quiz, JSON.stringify(quiz));
+    game.completed = []; game.signature = quizSignature(); saveGame(); destroyEditorPlayer(); render(); showView("board"); toast("Quiz saved. Completed questions were cleared.");
+  }
+
+  function closeEditor() { destroyEditorPlayer(); editorDraft = null; showView("board"); }
+
+  function loadEditorVideo() {
+    syncEditorQuestion(); const id = extractYouTubeId(editorDraft.questions[editorIndex].youtube);
+    if (!id) { $("editorStatus").textContent = "Enter a valid YouTube URL first."; $("editorStatus").classList.add("error"); return; }
+    if (!apiReady) { $("editorStatus").textContent = "The YouTube API is still loading. Check your connection and try again."; return; }
+    $("editorStatus").classList.remove("error");
+    if (!editorPlayer) editorPlayer = new YT.Player("editorYoutubePlayer", { height: "315", width: "560", videoId: id, playerVars: { playsinline: 1, rel: 0 }, events: { onError: (event) => { $("editorStatus").textContent = `YouTube player error ${event.data}. The video may be unavailable or blocked from embedding.`; } } });
+    else editorPlayer.cueVideoById(id);
+    $("editorStatus").textContent = "Video loaded. Use the YouTube controls to find your timestamps.";
+    if (editorTick !== null) window.clearInterval(editorTick);
+    editorTick = window.setInterval(() => { if (editorPlayer?.getCurrentTime) updateTimestampReadout(editorPlayer.getCurrentTime()); }, 200);
+  }
+
+  function updateTimestampReadout(value) { const seconds = Math.max(0, Number(value) || 0); $("timestampReadout").textContent = `${seconds.toFixed(1)} seconds · ${formatTimestamp(seconds)}`; }
+  function captureTimestamp(field) {
+    if (!editorPlayer?.getCurrentTime) { $("editorStatus").textContent = "Load the video first."; return; }
+    const value = Math.round(editorPlayer.getCurrentTime() * 10) / 10; $(field).value = formatTimestamp(value); updateTimestampReadout(value); syncEditorQuestion();
+  }
+  function destroyEditorPlayer() {
+    if (editorTick !== null) window.clearInterval(editorTick); editorTick = null;
+    if (editorPlayer?.destroy) editorPlayer.destroy(); editorPlayer = null;
+    const stage = document.querySelector(".editor-player");
+    if (stage && !$("editorYoutubePlayer")) { const target = document.createElement("div"); target.id = "editorYoutubePlayer"; stage.append(target); }
+  }
+
+  function exportQuiz() {
+    syncEditorQuestion(); editorDraft.title = $("editorTitle").value; editorDraft.categories = [...new Set(editorDraft.questions.map((q) => q.category))];
+    const blob = new Blob([JSON.stringify(editorDraft, null, 2)], { type: "application/json" }); const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob); link.download = `${editorDraft.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "music-quiz"}.json`; link.click(); URL.revokeObjectURL(link.href);
+  }
+
+  function importQuiz(file) {
+    if (!file) return; const reader = new FileReader();
+    reader.onload = () => { try { const imported = JSON.parse(reader.result); const error = validateQuiz(imported); if (error) throw new Error(error); editorDraft = normalizeQuiz(imported); editorIndex = 0; $("editorTitle").value = editorDraft.title; renderEditorList(); loadEditorQuestion(); toast("Quiz imported. Press Save quiz to apply it."); } catch (error) { $("editorStatus").textContent = `Import failed: ${error.message}`; $("editorStatus").classList.add("error"); } };
+    reader.onerror = () => { $("editorStatus").textContent = "The selected file could not be read."; }; reader.readAsText(file); $("importFile").value = "";
+  }
+
+  $("playButton").addEventListener("click", togglePlay); $("stopButton").addEventListener("click", () => { stopPlayback(); setStatus("Stopped."); });
+  $("restartButton").addEventListener("click", () => playSegment()); $("revealButton").addEventListener("click", revealAnswer); $("playAnswerButton").addEventListener("click", () => playSegment("answer"));
+  $("showVideoButton").addEventListener("click", () => { const visible = $("playerCard").classList.toggle("video-visible"); $("showVideoButton").textContent = visible ? "Hide video" : "Show video"; });
+  $("backButton").addEventListener("click", closeQuestion); $("noPointsButton").addEventListener("click", () => finishQuestion(null, 0));
+  $("resetButton").addEventListener("click", resetGame); $("settingsButton").addEventListener("click", openEditor);
+  $("editorForm").addEventListener("submit", saveEditor); $("cancelEditorButton").addEventListener("click", closeEditor); $("discardEditorButton").addEventListener("click", closeEditor);
+  $("loadEditorVideo").addEventListener("click", loadEditorVideo); $("setStartButton").addEventListener("click", () => captureTimestamp("editStart")); $("setStopButton").addEventListener("click", () => captureTimestamp("editStop"));
+  $("exportButton").addEventListener("click", exportQuiz); $("importButton").addEventListener("click", () => $("importFile").click()); $("importFile").addEventListener("change", (event) => importQuiz(event.target.files[0]));
+  document.addEventListener("keydown", (event) => {
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) || event.target.isContentEditable || !$("editorView").hidden) return;
+    if (event.key === "Escape" && activeIndex !== null) closeQuestion();
+    if (activeIndex === null) return;
+    if (event.code === "Space") { event.preventDefault(); togglePlay(); }
+    if (event.key.toLowerCase() === "r") playSegment();
+    if (event.key.toLowerCase() === "a") revealAnswer();
+  });
+  window.addEventListener("beforeunload", () => { stopPlayback(); destroyEditorPlayer(); });
+
+  render(); showView("board");
+})();

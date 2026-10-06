@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070b16">
+  <title>Weekend Music Quiz</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div><p class="kicker">Live game</p><h1 id="quizTitle">Weekend Music Quiz</h1><p class="subtitle" id="quizSubtitle"></p></div>
+      <div class="top-actions"><button class="icon-button" id="settingsButton" type="button" aria-label="Open quiz editor" title="Quiz editor">⚙</button><button class="button ghost" id="resetButton" type="button">Reset game</button></div>
+    </header>
+    <main>
+      <section id="boardView" aria-label="Quiz board">
+        <div class="teams" id="teams"></div>
+        <div class="board-frame"><div class="board" id="board"></div></div>
+        <div class="host-hint"><span>Host controls</span><kbd>Space</kbd> play/pause <kbd>R</kbd> restart <kbd>A</kbd> reveal <kbd>Esc</kbd> board</div>
+      </section>
+      <section class="question-view" id="questionView" hidden aria-live="polite">
+        <div class="question-header"><div><p class="kicker" id="questionCategory"></p><div class="question-points" id="questionPoints"></div></div><button class="button ghost" id="backButton" type="button">← Board</button></div>
+        <div class="question-copy"><h2 id="questionPrompt"></h2><p id="questionInstruction"></p></div>
+        <div class="player-card" id="playerCard">
+          <div class="player-cover" id="playerCover"><div class="music-mark" aria-hidden="true">♪</div><strong>Music clip</strong><span id="clipRange">Ready for the host</span></div>
+          <div class="youtube-stage" id="youtubeStage" aria-label="YouTube player"><div id="youtubePlayer"></div></div>
+          <p class="status" id="playerStatus" role="status"></p>
+        </div>
+        <div class="controls primary-controls"><button class="button gold" id="playButton" type="button">▶ Play clip</button><button class="button" id="stopButton" type="button">■ Stop</button><button class="button" id="restartButton" type="button">↻ Restart clip</button><button class="button reveal-button" id="revealButton" type="button">Reveal answer</button></div>
+        <div class="answer-card" id="answerCard" hidden>
+          <p class="answer-label" id="answerLabel">Answer</p><div class="answer-text" id="answerText"></div><div class="song-info" id="songInfo"></div>
+          <div class="answer-actions"><button class="button gold" id="playAnswerButton" type="button">▶ Play answer</button><button class="button ghost" id="showVideoButton" type="button">Show video</button></div>
+          <div class="scoring"><p>Award the question</p><div class="score-buttons" id="scoreButtons"></div><button class="button ghost no-points" id="noPointsButton" type="button">No points / close question</button></div>
+        </div>
+      </section>
+      <section class="editor-view" id="editorView" hidden>
+        <div class="editor-header"><div><p class="kicker">Host settings</p><h2>Quiz editor</h2><p>Edit the quiz without touching the source code.</p></div><button class="button ghost" id="cancelEditorButton" type="button">Close</button></div>
+        <form id="editorForm">
+          <div class="editor-toolbar"><label class="field grow"><span>Quiz title</span><input id="editorTitle" required></label><button class="button" id="importButton" type="button">Import quiz</button><button class="button" id="exportButton" type="button">Export quiz</button><input id="importFile" type="file" accept="application/json,.json" hidden></div>
+          <div class="editor-layout">
+            <aside class="question-list" id="editorQuestionList"></aside>
+            <div class="question-editor" id="questionEditor">
+              <div class="form-grid">
+                <label class="field"><span>Category</span><input id="editCategory" required></label><label class="field"><span>Points</span><input id="editPoints" type="number" min="0" step="1" required></label>
+                <label class="field full"><span>YouTube URL</span><input id="editYoutube" type="url" placeholder="https://www.youtube.com/watch?v=…"></label><label class="field"><span>Start time</span><input id="editStart" placeholder="0 or 1:23.5"></label><label class="field"><span>Stop time</span><input id="editStop" placeholder="15 or 1:38.5"></label>
+                <label class="field full"><span>Question / instruction</span><textarea id="editQuestion" rows="2" required></textarea></label><label class="field full"><span>Answer</span><textarea id="editAnswer" rows="2"></textarea></label>
+                <label class="field"><span>Song</span><input id="editSong"></label><label class="field"><span>Artist</span><input id="editArtist"></label><label class="field"><span>Answer playback duration (seconds)</span><input id="editAnswerDuration" type="number" min="1" max="60" step="0.5"></label>
+              </div>
+              <div class="timestamp-tool"><div class="tool-heading"><div><strong>Timestamp helper</strong><p>Load the video, scrub to a moment, then capture it.</p></div><button class="button" id="loadEditorVideo" type="button">Load video</button></div><div class="editor-player"><div id="editorYoutubePlayer"></div></div><div class="timestamp-actions"><button class="button" id="setStartButton" type="button">Set start to current time</button><button class="button" id="setStopButton" type="button">Set stop to current time</button><span id="timestampReadout">0 seconds · 0:00</span></div><p class="status" id="editorStatus" role="status"></p></div>
+            </div>
+          </div>
+          <div class="editor-footer"><button class="button ghost" id="discardEditorButton" type="button">Cancel changes</button><button class="button gold" type="submit">Save quiz</button></div>
+        </form>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://www.youtube.com/iframe_api"></script><script src="quiz-data.js"></script><script src="app.js"></script>
+</body>
+</html>
