@@ -78,7 +78,7 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .equalizer i:nth-child(3) { height: 13px; animation-delay: -.25s; }
 .equalizer i:nth-child(4) { height: 24px; animation-delay: -.7s; }
 .equalizer i:nth-child(5) { height: 16px; animation-delay: -.4s; }
-.frame-title { position: absolute; z-index: 7; top: 0; right: 0; left: 0; padding: clamp(20px, 3vw, 38px) clamp(20px, 4vw, 54px) 70px; background: linear-gradient(to bottom, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 58%, transparent 100%); text-align: center; pointer-events: none; }
+.frame-title { position: absolute; z-index: 7; top: 0; right: 0; left: 0; padding: clamp(20px, 3vw, 38px) clamp(20px, 4vw, 54px) 70px; background: linear-gradient(to bottom, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 18%, transparent 100%); text-align: center; pointer-events: none; }
 .frame-title h2 { max-width: 1050px; margin: 0 auto; font-size: clamp(1.5rem, 3.2vw, 3.55rem); line-height: 1.08; letter-spacing: -.035em; text-shadow: 0 3px 14px rgba(0, 0, 0, .85); }
 .frame-title p { margin: 8px 0 0; color: #d1d8e5; font-size: clamp(.78rem, 1.3vw, 1.05rem); text-shadow: 0 2px 8px #000; }
 .clip-details { display: flex; justify-content: space-between; gap: 16px; width: min(100%, 1400px); min-height: 22px; margin: 9px auto 0; color: var(--muted); font-size: .82rem; }
