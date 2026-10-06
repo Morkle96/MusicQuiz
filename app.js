@@ -90,10 +90,14 @@
     if (!data || typeof data !== "object") return "The file does not contain a quiz object.";
     if (typeof data.title !== "string" || !data.title.trim()) return "The quiz needs a title.";
     if (!Array.isArray(data.questions) || !data.questions.length) return "The quiz needs at least one question.";
+    const categories = Array.isArray(data.categories) ? data.categories.map(String) : [...new Set(data.questions.map((q) => String(q?.category || "")))];
+    if (categories.length !== 5 || new Set(categories).size !== 5) return "The quiz must contain exactly 5 unique categories.";
+    if (data.questions.length !== 20) return "The quiz must contain exactly 4 questions in each of its 5 categories.";
+    if (categories.some((category) => data.questions.filter((q) => String(q?.category) === category).length !== 4)) return "Every category must contain exactly 4 questions.";
     for (let i = 0; i < data.questions.length; i += 1) {
       const q = data.questions[i];
       if (!q || typeof q !== "object" || !String(q.category || "").trim()) return `Question ${i + 1} needs a category.`;
-      if ((typeof q.points !== "string" && typeof q.points !== "number") || !String(q.points).trim()) return `Question ${i + 1} needs a difficulty label.`;
+      if ((typeof q.points !== "string" && typeof q.points !== "number") || !String(q.points).trim()) return `Question ${i + 1} needs a quiz title.`;
       const start = parseTimestamp(q.start), stop = parseTimestamp(q.stop);
       if (!Number.isFinite(start) || !Number.isFinite(stop) || stop <= start) return `Question ${i + 1} needs a valid stop time after its start time.`;
       if (!Number.isFinite(parseTimestamp(q.revealStart ?? q.stop))) return `Question ${i + 1} needs a valid reveal start time.`;
@@ -150,15 +154,16 @@
     const board = $("board"); board.replaceChildren();
     board.style.setProperty("--columns", quiz.categories.length);
     quiz.categories.forEach((category) => { const header = document.createElement("div"); header.className = "category-header"; header.textContent = category; board.append(header); });
-    const values = [...new Set(quiz.questions.map((q) => String(q.points)))];
-    values.forEach((points) => quiz.categories.forEach((category) => {
-      const index = quiz.questions.findIndex((q) => q.category === category && String(q.points) === points);
-      if (index < 0) { const gap = document.createElement("div"); gap.className = "tile gap"; board.append(gap); return; }
+    for (let questionNumber = 0; questionNumber < 4; questionNumber += 1) quiz.categories.forEach((category) => {
+      const categoryIndexes = quiz.questions.map((q, index) => q.category === category ? index : -1).filter((index) => index >= 0);
+      const index = categoryIndexes[questionNumber];
+      if (!Number.isInteger(index)) { const gap = document.createElement("div"); gap.className = "tile gap"; board.append(gap); return; }
+      const quizTitle = quiz.questions[index].points;
       const button = document.createElement("button"); const completed = game.completed.includes(index);
       button.type = "button"; button.className = "tile"; button.disabled = completed;
-      button.textContent = completed ? "✓" : points; button.setAttribute("aria-label", `${category}, difficulty ${points}${completed ? ", completed" : ""}`);
+      button.textContent = completed ? "✓" : quizTitle; button.setAttribute("aria-label", `${category}, question ${questionNumber + 1}: ${quizTitle}${completed ? ", completed" : ""}`);
       button.addEventListener("click", () => openQuestion(index)); board.append(button);
-    }));
+    });
   }
 
   function showView(name) {
@@ -172,7 +177,8 @@
   function openQuestion(index) {
     stopPlayback(); activeIndex = index; answerRevealed = false; pendingAwards = game.teams.map(() => 0);
     const q = quiz.questions[index]; const { start, stop } = questionTimes(q);
-    $("questionCategory").textContent = q.category; $("questionPoints").textContent = `Difficulty · ${q.points}`;
+    const questionNumber = quiz.questions.filter((item, itemIndex) => item.category === q.category && itemIndex <= index).length;
+    $("questionCategory").textContent = q.category; $("questionPoints").textContent = `Question ${questionNumber}`;
     $("questionPrompt").textContent = q.question || "Listen to the music clip.";
     $("questionInstruction").textContent = q.category === "First Words" ? "Listen to the intro, then guess the first words sung." : q.category === "Finish the Lyrics" ? "Continue the lyric after the clip stops." : "Listen carefully and give your answer.";
     $("clipRange").textContent = Number.isFinite(start) && Number.isFinite(stop) ? `Clip ${formatTimestamp(start)} → ${formatTimestamp(stop)} · Reveal from ${formatTimestamp(questionTimes(q).revealStart)}` : "Timestamps need attention";
@@ -303,10 +309,11 @@
     renderEditorList(); loadEditorQuestion(); showView("editor");
   }
 
-  const editorFields = { category: "editCategory", points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", revealStart: "editRevealStart", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
+  const editorFields = { points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", revealStart: "editRevealStart", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
   function syncEditorQuestion() {
     if (!editorDraft?.questions[editorIndex]) return;
-    const q = editorDraft.questions[editorIndex]; Object.entries(editorFields).forEach(([key, id]) => { q[key] = key === "answerPlaybackDuration" ? Number($(id).value) : $(id).value; });
+    const q = editorDraft.questions[editorIndex];
+    Object.entries(editorFields).forEach(([key, id]) => { q[key] = key === "answerPlaybackDuration" ? Number($(id).value) : $(id).value; });
     q.hiddenVideo = $("editHiddenVideo").checked;
     editorDraft.title = $("editorTitle").value;
   }
@@ -316,14 +323,30 @@
     Object.entries(editorFields).forEach(([key, id]) => { $(id).value = q[key] ?? ""; });
     $("editHiddenVideo").checked = q.hiddenVideo === true;
     $("editorStatus").textContent = ""; $("editorStatus").classList.remove("error"); updateTimestampReadout(0);
-    [...$("editorQuestionList").children].forEach((node, i) => node.classList.toggle("selected", i === editorIndex));
   }
 
   function renderEditorList() {
-    const list = $("editorQuestionList"); list.replaceChildren(...editorDraft.questions.map((q, index) => {
-      const button = document.createElement("button"); button.type = "button"; button.className = "editor-question";
-      button.innerHTML = `<span>${escapeHtml(q.category)}</span><strong>${escapeHtml(q.points)}</strong>`;
-      button.addEventListener("click", () => { syncEditorQuestion(); editorIndex = index; renderEditorList(); loadEditorQuestion(); }); return button;
+    const list = $("editorQuestionList"); list.replaceChildren(...editorDraft.categories.map((category, categoryIndex) => {
+      const folder = document.createElement("details"); folder.className = "editor-category";
+      const indexes = editorDraft.questions.map((q, index) => q.category === category ? index : -1).filter((index) => index >= 0);
+      folder.open = indexes.includes(editorIndex);
+      const summary = document.createElement("summary");
+      const categoryName = document.createElement("input"); categoryName.className = "category-name-input"; categoryName.value = category; categoryName.setAttribute("aria-label", `Category ${categoryIndex + 1} title`);
+      categoryName.addEventListener("click", (event) => event.stopPropagation()); categoryName.addEventListener("keydown", (event) => event.stopPropagation());
+      let currentCategory = category;
+      categoryName.addEventListener("input", () => {
+        const nextCategory = categoryName.value;
+        editorDraft.questions.forEach((question) => { if (question.category === currentCategory) question.category = nextCategory; });
+        editorDraft.categories[categoryIndex] = nextCategory; currentCategory = nextCategory;
+      });
+      const count = document.createElement("small"); count.textContent = "4 questions"; summary.append(categoryName, count); folder.append(summary);
+      const questions = document.createElement("div"); questions.className = "editor-category-questions";
+      indexes.forEach((index, questionIndex) => {
+        const q = editorDraft.questions[index]; const button = document.createElement("button"); button.type = "button"; button.className = "editor-question";
+        button.classList.toggle("selected", index === editorIndex); button.innerHTML = `<span>Question ${questionIndex + 1}</span><small>${escapeHtml(q.points)}</small>`;
+        button.addEventListener("click", () => { syncEditorQuestion(); editorIndex = index; renderEditorList(); loadEditorQuestion(); }); questions.append(button);
+      });
+      folder.append(questions); return folder;
     }));
   }
 

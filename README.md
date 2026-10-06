@@ -32,7 +32,7 @@ Example question:
 ```js
 {
   category: "First Words",
-  points: "Easy",
+  points: "Opening Lyrics",
   youtube: "https://www.youtube.com/watch?v=VIDEO_ID",
   start: 0,
   stop: "0:18.3",
@@ -52,7 +52,7 @@ Paste normal `youtube.com/watch`, `youtu.be`, `youtube.com/shorts`, or `youtube.
 
 Clip start, clip stop, and reveal start can be seconds (`83.5`) or readable `MM:SS` timestamps (`"1:23.5"`). For a twelve-second clip, use start `0:00` and stop `0:12` (not `12:00`, which means twelve minutes). The app checks the player's current playback time about every 75 ms and pauses at the cutoff, avoiding timer drift caused by buffering. Revealing the answer starts playback at `revealStart` for `answerPlaybackDuration` seconds.
 
-The `points` field is only the board's difficulty label. It may contain a number such as `100` or text such as `Easy`, `Hard`, or `Final`. Actual team scoring is always selected separately from 0 to 5 after revealing an answer.
+The quiz layout is fixed at five categories with four questions in each category. The editor sidebar shows each category as a collapsible folder containing Question 1–4. Edit a category title directly in its folder heading; the new title is applied to all four questions. The legacy `points` field is used as the editable quiz title shown on its board tile; question difficulty is determined by its fixed position and cannot be edited. Actual team scoring is always selected separately from 0 to 5 after revealing an answer.
 
 Enable **Hidden video** on any question where the picture could reveal the answer. It defaults to enabled for the initial **Who's Singing?** questions. A custom music splash screen covers the video while the quiz controls remain available, then fades away when **Reveal answer** is pressed.
 
