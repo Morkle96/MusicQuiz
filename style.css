@@ -92,7 +92,7 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .transport-main:hover { background: #fff; color: #080b12; }
 .reveal-button { position: absolute; right: 28px; bottom: 22px; min-height: 50px; border-color: #526581; background: rgba(22, 33, 56, .92); text-transform: uppercase; letter-spacing: .035em; }
 
-.answer-card { position: absolute; z-index: 8; top: 50%; left: 50%; width: min(78%, 920px); transform: translate(-50%, -50%); padding: clamp(22px, 3.5vw, 46px); border: 1px solid rgba(151, 169, 199, .55); border-radius: 24px; background: rgba(9, 15, 27, .88); text-align: center; box-shadow: 0 22px 70px rgba(0, 0, 0, .5); backdrop-filter: blur(12px); }
+.answer-card { position: absolute; z-index: 8; top: 50%; left: 50%; width: min(78%, 920px); transform: translate(-50%, -50%); padding: clamp(22px, 3.5vw, 46px); text-align: center; text-shadow: 0 3px 18px #000, 0 1px 5px #000; }
 .answer-card.reveal { animation: frameReveal .42s cubic-bezier(.2, .8, .2, 1) both; }
 .answer-label { margin: 0 0 10px; color: var(--gold); font-size: .82rem; font-weight: 950; letter-spacing: .18em; text-transform: uppercase; }
 .answer-text { font-size: clamp(2rem, 5vw, 4.5rem); font-weight: 950; line-height: 1.12; }
@@ -184,7 +184,7 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
   .frame-title { padding: 14px 12px 48px; }
   .frame-title h2 { font-size: clamp(1.05rem, 5vw, 1.55rem); }
   .frame-title p { display: none; }
-  .answer-card { width: 90%; padding: 16px; border-radius: 15px; }
+  .answer-card { width: 90%; padding: 16px; }
   .answer-text { font-size: clamp(1.4rem, 7vw, 2.2rem); }
   .song-info { margin-top: 6px; font-size: .92rem; }
   .answer-actions { margin-top: 12px; }
