@@ -197,8 +197,8 @@
     if (!apiReady || activeIndex === null) { if (!apiReady) setStatus("Loading the YouTube player…"); return; }
     const id = extractYouTubeId(quiz.questions[activeIndex].youtube); if (!id) return;
     if (!player) {
-      player = new YT.Player("youtubePlayer", { height: "360", width: "640", videoId: id, playerVars: { playsinline: 1, rel: 0 }, events: {
-        onReady: () => setStatus("Ready."), onError: handlePlayerError,
+      player = new YT.Player("youtubePlayer", { height: "360", width: "640", videoId: id, playerVars: { controls: 0, disablekb: 1, playsinline: 1, rel: 0 }, events: {
+        onReady: () => { const iframe = player.getIframe(); iframe.setAttribute("tabindex", "-1"); setStatus("Ready."); }, onError: handlePlayerError,
         onStateChange: (event) => {
           setPlayButton(event.data === YT.PlayerState.PLAYING);
           if (event.data === YT.PlayerState.PLAYING && Number.isFinite(segmentEnd)) startMonitor(segmentEnd);

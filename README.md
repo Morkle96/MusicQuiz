@@ -10,7 +10,7 @@ Serve this folder through a small local web server (opening `index.html` directl
 python -m http.server 8000
 ```
 
-Then open `http://localhost:8000`. An internet connection is required for the YouTube IFrame Player API and videos. Click a difficulty tile, use the video controls, reveal the answer, choose 0–5 points for every team, and press **Done**. Team names, scores, completed questions, team count, and editor changes are saved in the browser.
+Then open `http://localhost:8000`. An internet connection is required for the YouTube IFrame Player API and videos. Click a difficulty tile, use the quiz controls along the bottom of the video, reveal the answer, choose 0–5 points for every team, and press **Done**. The game video itself is non-interactive so contestants and hosts use only the custom controls. Team names, scores, completed questions, team count, and editor changes are saved in the browser.
 
 ## Deploy to GitHub Pages
 
