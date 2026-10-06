@@ -40,7 +40,7 @@ button { color: inherit; }
 .button.ghost { background: transparent; }
 .icon-button { width: 50px; padding: 0; font-size: 1.4rem; }
 
-.teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+.teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 16px; margin-bottom: 20px; }
 .team-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 94px; padding: 18px 22px; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(16, 24, 42, .88); box-shadow: 0 12px 34px rgba(0, 0, 0, .18); }
 .team-card input { min-width: 0; width: 100%; border: 0; border-bottom: 1px solid transparent; padding: 5px 0; background: transparent; color: var(--text); font-size: clamp(1rem, 2vw, 1.4rem); font-weight: 800; }
 .team-card input:hover, .team-card input:focus { border-bottom-color: var(--line); outline: 0; }
@@ -57,25 +57,28 @@ button { color: inherit; }
 .host-hint span { margin-right: 6px; font-weight: 800; }
 kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 2px 6px; background: var(--surface); color: var(--text); text-align: center; font: inherit; font-weight: 800; }
 
-.question-view { max-width: 1080px; margin: 0 auto; animation: enter .32s ease both; }
+.question-open .topbar { display: none; }
+.question-view { max-width: 1240px; margin: 0 auto; animation: enter .32s ease both; }
 .question-header { align-items: flex-start; }
+.back-button { min-height: 60px; padding: 14px 24px; border-width: 2px; font-size: 1.08rem; }
+.question-meta { margin-left: auto; text-align: right; }
 .question-points { margin-top: 6px; color: var(--gold); font-size: clamp(2rem, 5vw, 4rem); font-weight: 950; }
-.question-copy { margin: clamp(30px, 5vw, 70px) auto; text-align: center; }
+.question-copy { margin: clamp(24px, 3vw, 44px) auto; text-align: center; }
 .question-copy h2 { max-width: 900px; margin: 0 auto; font-size: clamp(2rem, 5vw, 4.8rem); line-height: 1.08; letter-spacing: -.035em; }
 .question-copy p { margin: 15px 0 0; color: var(--muted); font-size: clamp(1rem, 2vw, 1.25rem); }
-.player-card { position: relative; min-height: 260px; overflow: hidden; border: 1px solid var(--line); border-radius: 24px; background: #070a11; }
-.player-cover { position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; gap: 6px; background: var(--surface); text-align: center; transition: opacity .25s ease, visibility .25s ease; }
-.music-mark { display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: 8px; border: 1px solid #485978; border-radius: 50%; color: var(--gold); font-size: 3rem; }
-.player-cover strong { font-size: 1.45rem; letter-spacing: .16em; text-transform: uppercase; }
-.player-cover span { color: var(--muted); }
-.youtube-stage { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; background: #000; }
-.youtube-stage iframe { width: min(100%, 720px); height: 100%; border: 0; }
-.player-card.video-visible .player-cover { visibility: hidden; opacity: 0; }
-.status { position: absolute; z-index: 3; right: 16px; bottom: 10px; left: 16px; margin: 0; color: var(--muted); font-size: .82rem; text-align: center; pointer-events: none; }
+.player-card { position: relative; width: min(100%, 1120px); aspect-ratio: 16 / 9; overflow: hidden; margin: 0 auto; border: 1px solid var(--line); border-radius: 24px; background: #000; box-shadow: 0 22px 60px rgba(0, 0, 0, .32); }
+.youtube-stage { position: absolute; inset: 0; display: grid; place-items: center; background: #000; }
+.youtube-stage iframe { width: 100%; height: 100%; border: 0; }
+.clip-details { display: flex; justify-content: space-between; gap: 16px; width: min(100%, 1120px); min-height: 22px; margin: 9px auto 0; color: var(--muted); font-size: .82rem; }
+.status { margin: 0; color: var(--muted); font-size: .82rem; text-align: right; }
 .status.error { color: var(--red); }
-.primary-controls { justify-content: center; margin-top: 18px; }
-.primary-controls .button { min-height: 58px; padding-inline: clamp(16px, 2.3vw, 28px); text-transform: uppercase; letter-spacing: .035em; }
-.reveal-button { margin-left: auto; border-color: var(--blue); background: #19335d; }
+.primary-controls { position: relative; display: flex; justify-content: center; align-items: center; width: min(100%, 1120px); min-height: 88px; margin: 8px auto 0; }
+.transport-controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
+.transport-button { display: grid; place-items: center; width: 48px; height: 48px; border: 0; border-radius: 50%; padding: 0; background: transparent; color: #c6cede; font-size: 1.65rem; cursor: pointer; transition: color .15s ease, transform .15s ease, background .15s ease; }
+.transport-button:hover { color: #fff; transform: scale(1.08); }
+.transport-main { width: 68px; height: 68px; padding-left: 3px; background: var(--text); color: #080b12; font-size: 1.8rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }
+.transport-main:hover { background: #fff; color: #080b12; }
+.reveal-button { position: absolute; right: 0; min-height: 54px; border-color: var(--blue); background: #19335d; text-transform: uppercase; letter-spacing: .035em; }
 
 .answer-card { margin-top: 28px; padding: clamp(24px, 4vw, 48px); border: 1px solid #4b5771; border-radius: 24px; background: var(--surface-2); text-align: center; }
 .answer-card.reveal { animation: reveal .42s cubic-bezier(.2, .8, .2, 1) both; }
@@ -85,7 +88,7 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .answer-actions { justify-content: center; margin-top: 26px; }
 .scoring { margin-top: 32px; padding-top: 26px; border-top: 1px solid var(--line); }
 .scoring > p { margin: 0 0 14px; color: var(--muted); font-weight: 800; }
-.score-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.score-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .score-action.positive { border-color: #3e8762; background: #173b2a; }
 .score-action.negative { border-color: #80464c; background: #3b2026; }
 .no-points { margin-top: 15px; }
@@ -93,6 +96,12 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .editor-view { animation: enter .25s ease both; }
 .editor-header { align-items: flex-start; margin-bottom: 26px; }
 .editor-header h2 { font-size: clamp(2rem, 4vw, 3.5rem); }
+.game-settings { display: flex; align-items: center; gap: 22px; margin-bottom: 18px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.game-settings > div:first-child { flex: 1; }
+.game-settings p { margin: 5px 0 0; color: var(--muted); font-size: .9rem; }
+.team-count-field { width: 140px; }
+.button.danger { border-color: #8b454d; background: #3b2026; color: #ffb5b5; }
+.button.danger:hover { border-color: var(--red); background: #4a262d; }
 .editor-toolbar { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; background: var(--surface); }
 .grow { flex: 1; }
 .editor-layout { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; min-height: 580px; border: 1px solid var(--line); border-top: 0; background: var(--surface); }
@@ -128,17 +137,22 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
   .score-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .editor-toolbar { flex-wrap: wrap; }
   .editor-toolbar .grow { flex-basis: 100%; }
+  .game-settings { flex-wrap: wrap; }
 }
 @media (max-width: 600px) {
   .app-shell { padding: 14px; }
   .topbar, .question-header, .editor-header { align-items: flex-start; }
-  .teams { grid-template-columns: 1fr; }
   .team-card { min-height: 74px; }
   .form-grid { grid-template-columns: 1fr; }
   .field.full { grid-column: auto; }
-  .reveal-button { width: 100%; margin-left: 0; }
-  .primary-controls .button { flex: 1 1 42%; }
-  .player-card { min-height: 230px; }
+  .primary-controls { padding-bottom: 74px; }
+  .reveal-button { right: auto; bottom: 4px; width: 100%; }
+  .player-card { border-radius: 14px; }
+  .clip-details { flex-direction: column; gap: 3px; }
+  .status { text-align: left; }
   .host-hint { display: none; }
   .timestamp-actions .button { width: 100%; }
+  .question-header { flex-direction: column; }
+  .question-meta { margin-left: 0; text-align: left; }
+  .back-button { min-height: 54px; }
 }

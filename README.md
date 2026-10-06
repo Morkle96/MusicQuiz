@@ -10,7 +10,7 @@ Serve this folder through a small local web server (opening `index.html` directl
 python -m http.server 8000
 ```
 
-Then open `http://localhost:8000`. An internet connection is required for the YouTube IFrame Player API and videos. Click a point value, use **Play clip**, reveal the answer, and award or deduct points. Team names, scores, completed questions, and editor changes are saved in the browser.
+Then open `http://localhost:8000`. An internet connection is required for the YouTube IFrame Player API and videos. Click a point value, use the video controls, reveal the answer, and award or deduct points. Team names, scores, completed questions, team count, and editor changes are saved in the browser.
 
 ## Deploy to GitHub Pages
 
@@ -23,7 +23,7 @@ All paths are relative, so the app works at an address such as `https://USERNAME
 
 ## Create and edit questions
 
-Click the gear button to open the Quiz Editor. Select a question on the left and edit its category, points, YouTube URL, timestamps, prompt, answer, song, artist, or answer playback duration. Categories and the board are generated from the saved questions. Press **Save quiz** to apply the changes. Saving a quiz clears completed-question marks but preserves team names and scores.
+Click the gear button to open Game Settings and the Quiz Editor. Game Settings lets you choose between one and eight teams or reset the game. Select a question on the left and edit its category, points, YouTube URL, timestamps, prompt, answer, song, artist, or answer playback duration. Categories and the board are generated from the saved questions. Press **Save quiz** to apply the changes. Saving a quiz clears completed-question marks but preserves team names and scores.
 
 For source-controlled quiz data, edit `quiz-data.js`. Browser editor changes are stored in `localStorage` and take precedence over that file until browser storage is cleared.
 
@@ -71,6 +71,6 @@ Shortcuts are ignored while typing in the editor or a team-name field. Returning
 
 ## Reset and troubleshooting
 
-**Reset game** asks for confirmation, then clears team names, scores, and completed questions. It does not delete the custom quiz saved by the editor. Browser storage contains no YouTube authentication data.
+Open the gear menu and choose **Reset game**. After confirmation, it restores two default teams and clears team names, scores, and completed questions. It does not delete the custom quiz saved by the editor. Browser storage contains no YouTube authentication data.
 
 If a clip does not play, check the displayed host message, confirm that the URL and timestamps are valid, and verify that the video is public and permits embedding. Browsers also require playback to begin from a user interaction, so the host must press a play control.

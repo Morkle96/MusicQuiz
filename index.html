@@ -11,7 +11,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div><p class="kicker">Live game</p><h1 id="quizTitle">Weekend Music Quiz</h1><p class="subtitle" id="quizSubtitle"></p></div>
-      <div class="top-actions"><button class="icon-button" id="settingsButton" type="button" aria-label="Open quiz editor" title="Quiz editor">⚙</button><button class="button ghost" id="resetButton" type="button">Reset game</button></div>
+      <div class="top-actions"><button class="icon-button" id="settingsButton" type="button" aria-label="Open game settings" title="Game settings">⚙</button></div>
     </header>
     <main>
       <section id="boardView" aria-label="Quiz board">
@@ -20,22 +20,20 @@
         <div class="host-hint"><span>Host controls</span><kbd>Space</kbd> play/pause <kbd>R</kbd> restart <kbd>A</kbd> reveal <kbd>Esc</kbd> board</div>
       </section>
       <section class="question-view" id="questionView" hidden aria-live="polite">
-        <div class="question-header"><div><p class="kicker" id="questionCategory"></p><div class="question-points" id="questionPoints"></div></div><button class="button ghost" id="backButton" type="button">← Board</button></div>
+        <div class="question-header"><button class="button ghost back-button" id="backButton" type="button">← Back to board</button><div class="question-meta"><p class="kicker" id="questionCategory"></p><div class="question-points" id="questionPoints"></div></div></div>
         <div class="question-copy"><h2 id="questionPrompt"></h2><p id="questionInstruction"></p></div>
-        <div class="player-card" id="playerCard">
-          <div class="player-cover" id="playerCover"><div class="music-mark" aria-hidden="true">♪</div><strong>Music clip</strong><span id="clipRange">Ready for the host</span></div>
-          <div class="youtube-stage" id="youtubeStage" aria-label="YouTube player"><div id="youtubePlayer"></div></div>
-          <p class="status" id="playerStatus" role="status"></p>
-        </div>
-        <div class="controls primary-controls"><button class="button gold" id="playButton" type="button">▶ Play clip</button><button class="button" id="stopButton" type="button">■ Stop</button><button class="button" id="restartButton" type="button">↻ Restart clip</button><button class="button reveal-button" id="revealButton" type="button">Reveal answer</button></div>
+        <div class="player-card" id="playerCard"><div class="youtube-stage" id="youtubeStage" aria-label="YouTube video player"><div id="youtubePlayer"></div></div></div>
+        <p class="clip-details"><span id="clipRange">Ready for the host</span><span class="status" id="playerStatus" role="status"></span></p>
+        <div class="primary-controls"><div class="transport-controls"><button class="transport-button" id="restartButton" type="button" aria-label="Restart clip" title="Restart clip">↻</button><button class="transport-button transport-main" id="playButton" type="button" aria-label="Play clip" title="Play or pause clip">▶</button><button class="transport-button" id="stopButton" type="button" aria-label="Stop clip" title="Stop clip">■</button></div><button class="button reveal-button" id="revealButton" type="button">Reveal answer</button></div>
         <div class="answer-card" id="answerCard" hidden>
           <p class="answer-label" id="answerLabel">Answer</p><div class="answer-text" id="answerText"></div><div class="song-info" id="songInfo"></div>
-          <div class="answer-actions"><button class="button gold" id="playAnswerButton" type="button">▶ Play answer</button><button class="button ghost" id="showVideoButton" type="button">Show video</button></div>
+          <div class="answer-actions"><button class="button gold" id="playAnswerButton" type="button">▶ Play answer</button></div>
           <div class="scoring"><p>Award the question</p><div class="score-buttons" id="scoreButtons"></div><button class="button ghost no-points" id="noPointsButton" type="button">No points / close question</button></div>
         </div>
       </section>
       <section class="editor-view" id="editorView" hidden>
         <div class="editor-header"><div><p class="kicker">Host settings</p><h2>Quiz editor</h2><p>Edit the quiz without touching the source code.</p></div><button class="button ghost" id="cancelEditorButton" type="button">Close</button></div>
+        <div class="game-settings"><div><strong>Game settings</strong><p>Choose how many teams are playing or start the game over.</p></div><label class="field team-count-field"><span>Number of teams</span><input id="teamCount" type="number" min="1" max="8" step="1"></label><button class="button danger" id="resetButton" type="button">Reset game</button></div>
         <form id="editorForm">
           <div class="editor-toolbar"><label class="field grow"><span>Quiz title</span><input id="editorTitle" required></label><button class="button" id="importButton" type="button">Import quiz</button><button class="button" id="exportButton" type="button">Export quiz</button><input id="importFile" type="file" accept="application/json,.json" hidden></div>
           <div class="editor-layout">

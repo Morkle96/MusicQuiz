@@ -4,7 +4,8 @@
   const STORAGE = { game: "musicQuiz.game.v2", quiz: "musicQuiz.customQuiz.v2" };
   const $ = (id) => document.getElementById(id);
   const clone = (value) => JSON.parse(JSON.stringify(value));
-  const defaultTeams = [{ name: "Team 1", score: 0 }, { name: "Team 2", score: 0 }];
+  const makeDefaultTeam = (index) => ({ name: `Team ${index + 1}`, score: 0 });
+  const defaultTeams = [makeDefaultTeam(0), makeDefaultTeam(1)];
   let quiz = loadCustomQuiz() || clone(QUIZ);
   let game = loadGame();
   let activeIndex = null;
@@ -106,8 +107,8 @@
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE.game));
       if (!saved || !Array.isArray(saved.teams)) return fallback;
-      saved.teams = saved.teams.slice(0, 2).map((team, i) => ({ name: String(team.name || `Team ${i + 1}`), score: Number(team.score) || 0 }));
-      while (saved.teams.length < 2) saved.teams.push(clone(defaultTeams[saved.teams.length]));
+      saved.teams = saved.teams.slice(0, 8).map((team, i) => ({ name: String(team.name || `Team ${i + 1}`), score: Number(team.score) || 0 }));
+      if (!saved.teams.length) saved.teams = clone(defaultTeams);
       saved.completed = saved.signature === quizSignature() && Array.isArray(saved.completed) ? saved.completed : [];
       saved.signature = quizSignature();
       return saved;
@@ -153,7 +154,8 @@
 
   function showView(name) {
     $("boardView").hidden = name !== "board"; $("questionView").hidden = name !== "question"; $("editorView").hidden = name !== "editor";
-    document.body.classList.toggle("editor-open", name === "editor"); window.scrollTo({ top: 0, behavior: "smooth" });
+    document.body.classList.toggle("editor-open", name === "editor");
+    document.body.classList.toggle("question-open", name === "question"); window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function questionTimes(q) { return { start: parseTimestamp(q.start), stop: parseTimestamp(q.stop) }; }
@@ -168,8 +170,8 @@
     $("answerLabel").textContent = q.category === "First Words" ? "First words" : "Answer";
     $("answerText").textContent = q.answer || "No answer configured";
     $("songInfo").textContent = [q.artist, q.song].filter(Boolean).join(" — ") || "No song details configured";
-    $("answerCard").hidden = true; $("revealButton").hidden = false; $("playerCard").classList.remove("video-visible");
-    $("showVideoButton").textContent = "Show video"; setStatus(questionWarning(q)); renderScoreButtons(); showView("question"); ensureGamePlayer();
+    $("answerCard").hidden = true; $("revealButton").hidden = false;
+    setStatus(questionWarning(q)); renderScoreButtons(); showView("question"); ensureGamePlayer();
   }
 
   function questionWarning(q) {
@@ -188,7 +190,10 @@
     if (!player) {
       player = new YT.Player("youtubePlayer", { height: "360", width: "640", videoId: id, playerVars: { playsinline: 1, rel: 0 }, events: {
         onReady: () => setStatus("Ready."), onError: handlePlayerError,
-        onStateChange: (event) => { if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) clearMonitor(); }
+        onStateChange: (event) => {
+          setPlayButton(event.data === YT.PlayerState.PLAYING);
+          if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) clearMonitor();
+        }
       }});
     } else { player.cueVideoById(id); setStatus("Ready."); }
   }
@@ -206,7 +211,11 @@
   }
 
   function clearMonitor() { if (monitor !== null) window.clearInterval(monitor); monitor = null; }
-  function stopPlayback() { clearMonitor(); if (player && typeof player.pauseVideo === "function") player.pauseVideo(); }
+  function setPlayButton(isPlaying) {
+    $("playButton").textContent = isPlaying ? "Ⅱ" : "▶";
+    $("playButton").setAttribute("aria-label", isPlaying ? "Pause clip" : "Play clip");
+  }
+  function stopPlayback() { clearMonitor(); if (player && typeof player.pauseVideo === "function") player.pauseVideo(); setPlayButton(false); }
 
   function playSegment(mode = "clip") {
     if (activeIndex === null) return;
@@ -257,13 +266,20 @@
 
   function resetGame() {
     if (!window.confirm("Reset team names, scores, and every completed question?")) return;
-    stopPlayback(); localStorage.removeItem(STORAGE.game); game = { teams: clone(defaultTeams), completed: [], signature: quizSignature() }; activeIndex = null; render(); showView("board"); toast("Game reset.");
+    stopPlayback(); destroyEditorPlayer(); editorDraft = null; localStorage.removeItem(STORAGE.game); game = { teams: clone(defaultTeams), completed: [], signature: quizSignature() }; activeIndex = null; render(); showView("board"); toast("Game reset.");
+  }
+
+  function setTeamCount(value) {
+    const count = Math.min(8, Math.max(1, Math.round(Number(value) || 2)));
+    while (game.teams.length < count) game.teams.push(makeDefaultTeam(game.teams.length));
+    if (game.teams.length > count) game.teams.length = count;
+    $("teamCount").value = count; saveGame(); renderTeams(); renderScoreButtons(); toast(`${count} ${count === 1 ? "team" : "teams"} ready.`);
   }
 
   function toast(message) { const node = $("toast"); node.textContent = message; node.classList.add("show"); window.setTimeout(() => node.classList.remove("show"), 2600); }
 
   function openEditor() {
-    stopPlayback(); editorDraft = clone(quiz); editorIndex = 0; $("editorTitle").value = editorDraft.title; renderEditorList(); loadEditorQuestion(); showView("editor");
+    stopPlayback(); editorDraft = clone(quiz); editorIndex = 0; $("editorTitle").value = editorDraft.title; $("teamCount").value = game.teams.length; renderEditorList(); loadEditorQuestion(); showView("editor");
   }
 
   const editorFields = { category: "editCategory", points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
@@ -337,9 +353,9 @@
 
   $("playButton").addEventListener("click", togglePlay); $("stopButton").addEventListener("click", () => { stopPlayback(); setStatus("Stopped."); });
   $("restartButton").addEventListener("click", () => playSegment()); $("revealButton").addEventListener("click", revealAnswer); $("playAnswerButton").addEventListener("click", () => playSegment("answer"));
-  $("showVideoButton").addEventListener("click", () => { const visible = $("playerCard").classList.toggle("video-visible"); $("showVideoButton").textContent = visible ? "Hide video" : "Show video"; });
   $("backButton").addEventListener("click", closeQuestion); $("noPointsButton").addEventListener("click", () => finishQuestion(null, 0));
   $("resetButton").addEventListener("click", resetGame); $("settingsButton").addEventListener("click", openEditor);
+  $("teamCount").addEventListener("change", (event) => setTeamCount(event.target.value));
   $("editorForm").addEventListener("submit", saveEditor); $("cancelEditorButton").addEventListener("click", closeEditor); $("discardEditorButton").addEventListener("click", closeEditor);
   $("loadEditorVideo").addEventListener("click", loadEditorVideo); $("setStartButton").addEventListener("click", () => captureTimestamp("editStart")); $("setStopButton").addEventListener("click", () => captureTimestamp("editStop"));
   $("exportButton").addEventListener("click", exportQuiz); $("importButton").addEventListener("click", () => $("importFile").click()); $("importFile").addEventListener("change", (event) => importQuiz(event.target.files[0]));
