@@ -56,6 +56,8 @@ The quiz layout is fixed at five categories with four questions in each category
 
 Enable **Hidden video** on any question where the picture could reveal the answer. It defaults to enabled for the initial **Who's Singing?** questions. A custom music splash screen covers the video while the quiz controls remain available, then fades away when **Reveal answer** is pressed.
 
+Every question first displays a **Ready?** splash screen so the YouTube frame cannot reveal anything before the host starts the clip. It fades away when playback begins. If **Hidden video** is enabled, the hidden-video cover remains underneath until the answer is revealed.
+
 The editor's timestamp helper can load the question's video. Play or scrub using the YouTube controls, then capture the clip start, clip stop, or reveal start. It displays both seconds and `MM:SS.s`.
 
 Pasting a valid YouTube URL in the editor automatically loads its metadata and attempts to fill **Song** and **Artist**. Titles formatted like `Artist - Song` are split automatically; otherwise the video title and channel name are used. This is best effort, so review the fields before saving—uploaders do not use one consistent naming format.

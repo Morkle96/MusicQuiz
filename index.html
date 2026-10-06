@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070b16">
   <title>Weekend Music Quiz</title>
-  <link rel="stylesheet" href="style.css?v=20261006-13">
+  <link rel="stylesheet" href="style.css?v=20261006-15">
 </head>
 <body>
   <div class="app-shell">
@@ -21,7 +21,7 @@
       </section>
       <section class="question-view" id="questionView" hidden aria-live="polite">
         <div class="question-header"><button class="button ghost back-button" id="backButton" type="button">← Back to board</button><div class="question-meta"><p class="kicker" id="questionCategory"></p><div class="question-points" id="questionPoints"></div></div></div>
-        <div class="player-card" id="playerCard"><div class="youtube-stage" id="youtubeStage" aria-label="YouTube video player"><div id="youtubePlayer"></div></div><div class="video-splash" id="videoSplash" aria-hidden="true"><div class="splash-art"><div class="splash-note">♪</div><div class="equalizer"><i></i><i></i><i></i><i></i><i></i></div></div><strong>Hidden video</strong><span>Listen closely — the picture appears with the answer</span></div><div class="frame-title"><h2 id="questionPrompt"></h2><p id="questionInstruction"></p></div><div class="answer-card" id="answerCard" hidden><p class="answer-label" id="answerLabel">Answer</p><div class="answer-text" id="answerText"></div><div class="song-info" id="songInfo"></div><div class="answer-actions"><button class="button gold" id="playAnswerButton" type="button">▶ Play answer</button></div></div><div class="primary-controls"><div class="transport-controls"><button class="transport-button" id="restartButton" type="button" aria-label="Restart clip" title="Restart clip">↻</button><button class="transport-button transport-main" id="playButton" type="button" aria-label="Play clip" title="Play or pause clip">▶</button><button class="transport-button" id="stopButton" type="button" aria-label="Stop clip" title="Stop clip">■</button></div><button class="button reveal-button" id="revealButton" type="button">Reveal answer</button></div></div>
+        <div class="player-card" id="playerCard"><div class="youtube-stage" id="youtubeStage" aria-label="YouTube video player"><div id="youtubePlayer"></div></div><div class="video-splash" id="videoSplash" aria-hidden="true"><div class="splash-art"><div class="splash-note">♪</div><div class="equalizer"><i></i><i></i><i></i><i></i><i></i></div></div><strong>Hidden video</strong><span>Listen closely — the picture appears with the answer</span></div><div class="ready-splash" id="readySplash"><button class="ready-disc" id="readyPlayButton" type="button" aria-label="Start music clip" title="Start music clip"><span>▶</span></button><strong>Ready?</strong><span>Press play when everyone is listening</span></div><div class="frame-title"><h2 id="questionPrompt"></h2><p id="questionInstruction"></p></div><div class="answer-card" id="answerCard" hidden><p class="answer-label" id="answerLabel">Answer</p><div class="answer-text" id="answerText"></div><div class="song-info" id="songInfo"></div><div class="answer-actions"><button class="button gold" id="playAnswerButton" type="button">▶ Play answer</button></div></div><div class="primary-controls"><div class="transport-controls"><button class="transport-button" id="restartButton" type="button" aria-label="Restart clip" title="Restart clip">↻</button><button class="transport-button transport-main" id="playButton" type="button" aria-label="Play clip" title="Play or pause clip">▶</button><button class="transport-button" id="stopButton" type="button" aria-label="Stop clip" title="Stop clip">■</button></div><button class="button reveal-button" id="revealButton" type="button">Reveal answer</button></div></div>
         <p class="clip-details"><span id="clipRange">Ready for the host</span><span class="status" id="playerStatus" role="status"></span></p>
         <div class="scoring-panel" id="scoringPanel" hidden><div class="scoring"><p>Choose 0–5 points for every team</p><div class="score-buttons" id="scoreButtons"></div><div class="scoring-actions"><button class="button ghost" id="noPointsButton" type="button">Set all to 0</button><button class="button gold" id="awardPointsButton" type="button">Done</button></div></div></div>
       </section>
@@ -48,6 +48,6 @@
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://www.youtube.com/iframe_api"></script><script src="quiz-data.js?v=20261006-12"></script><script src="app.js?v=20261006-12"></script>
+  <script src="https://www.youtube.com/iframe_api"></script><script src="quiz-data.js?v=20261006-15"></script><script src="app.js?v=20261006-15"></script>
 </body>
 </html>

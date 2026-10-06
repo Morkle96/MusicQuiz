@@ -229,6 +229,7 @@
     $("songInfo").textContent = [q.artist, q.song].filter(Boolean).join(" — ") || "No song details configured";
     $("answerCard").hidden = true; $("scoringPanel").hidden = true; $("revealButton").hidden = false;
     $("playerCard").classList.toggle("video-concealed", q.hiddenVideo === true);
+    $("playerCard").classList.add("awaiting-play");
     setStatus(questionWarning(q)); renderScoreButtons(); showView("question"); ensureGamePlayer();
   }
 
@@ -283,6 +284,7 @@
     if (!id || !Number.isFinite(times.start) || !Number.isFinite(times.stop) || times.stop <= times.start) { setStatus(questionWarning(q), true); return; }
     if (!apiReady) { setStatus("The YouTube API is still loading. Check your connection and try again.", true); return; }
     if (!player || typeof player.loadVideoById !== "function") { ensureGamePlayer(); setStatus("Preparing the player…"); return; }
+    $("playerCard").classList.remove("awaiting-play");
     const start = mode === "answer" ? times.revealStart : times.start;
     const end = mode === "answer" ? times.revealStart + (Number(q.answerPlaybackDuration) || 8) : times.stop;
     segmentEnd = end; clearMonitor(); player.loadVideoById({ videoId: id, startSeconds: start }); player.playVideo();
@@ -296,14 +298,14 @@
     const times = q ? questionTimes(q) : null;
     const current = Number(player.getCurrentTime());
     if (times && current >= times.start && current < times.stop) {
-      segmentEnd = times.stop; player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
+      $("playerCard").classList.remove("awaiting-play"); segmentEnd = times.stop; player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
     } else playSegment();
   }
 
   function revealAnswer() {
     if (activeIndex === null || answerRevealed) return; answerRevealed = true;
     $("answerCard").hidden = false; $("scoringPanel").hidden = false; $("revealButton").hidden = true; $("answerCard").classList.add("reveal");
-    $("playerCard").classList.remove("video-concealed");
+    $("playerCard").classList.remove("video-concealed", "awaiting-play");
     window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450); playSegment("answer"); $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -488,7 +490,7 @@
     reader.onerror = () => { $("editorStatus").textContent = "The selected file could not be read."; }; reader.readAsText(file); $("importFile").value = "";
   }
 
-  listen("playButton", "click", togglePlay); listen("stopButton", "click", () => { stopPlayback(); setStatus("Stopped."); });
+  listen("playButton", "click", togglePlay); listen("readyPlayButton", "click", togglePlay); listen("stopButton", "click", () => { stopPlayback(); setStatus("Stopped."); });
   listen("restartButton", "click", () => playSegment()); listen("revealButton", "click", revealAnswer); listen("playAnswerButton", "click", () => playSegment("answer"));
   listen("backButton", "click", closeQuestion); listen("noPointsButton", "click", () => { pendingAwards = game.teams.map(() => 0); renderScoreButtons(); }); listen("awardPointsButton", "click", () => finishQuestion(true));
   listen("resetButton", "click", resetGame); listen("settingsButton", "click", openEditor);
