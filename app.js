@@ -11,7 +11,7 @@
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const makeDefaultTeam = (index) => ({ name: `Team ${index + 1}`, score: 0 });
   const defaultTeams = [makeDefaultTeam(0), makeDefaultTeam(1)];
-  let quiz = loadCustomQuiz() || clone(QUIZ);
+  let quiz = normalizeQuiz(loadCustomQuiz() || clone(QUIZ));
   let game = loadGame();
   let activeIndex = null;
   let answerRevealed = false;
@@ -22,6 +22,8 @@
   let editorTick = null;
   let editorDraft = null;
   let editorIndex = 0;
+  let segmentEnd = null;
+  let pendingAwards = [];
 
   window.onYouTubeIframeAPIReady = () => {
     apiReady = true;
@@ -71,7 +73,7 @@
     normalized.questions = normalized.questions.map((q) => ({
       category: String(q.category || "Uncategorized").trim(),
       points: Number(q.points), youtube: String(q.youtube || "").trim(),
-      start: q.start ?? 0, stop: q.stop ?? 10,
+      start: q.start ?? 0, stop: q.stop ?? 10, revealStart: q.revealStart ?? q.stop ?? 10,
       question: String(q.question || "Listen to the music clip."),
       answer: String(q.answer || ""), song: String(q.song || ""), artist: String(q.artist || ""),
       answerPlaybackDuration: Number(q.answerPlaybackDuration) || 8
@@ -93,6 +95,7 @@
       if (!Number.isFinite(Number(q.points)) || Number(q.points) < 0) return `Question ${i + 1} has invalid points.`;
       const start = parseTimestamp(q.start), stop = parseTimestamp(q.stop);
       if (!Number.isFinite(start) || !Number.isFinite(stop) || stop <= start) return `Question ${i + 1} needs a valid stop time after its start time.`;
+      if (!Number.isFinite(parseTimestamp(q.revealStart ?? q.stop))) return `Question ${i + 1} needs a valid reveal start time.`;
       if (q.youtube && !extractYouTubeId(q.youtube)) return `Question ${i + 1} has an invalid YouTube URL.`;
     }
     return null;
@@ -104,7 +107,7 @@
   }
 
   function quizSignature() {
-    return JSON.stringify(quiz.questions.map((q) => [q.category, q.points, q.youtube, q.start, q.stop]));
+    return JSON.stringify(quiz.questions.map((q) => [q.category, q.points, q.youtube, q.start, q.stop, q.revealStart]));
   }
 
   function loadGame() {
@@ -163,15 +166,15 @@
     document.body.classList.toggle("question-open", name === "question"); window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function questionTimes(q) { return { start: parseTimestamp(q.start), stop: parseTimestamp(q.stop) }; }
+  function questionTimes(q) { return { start: parseTimestamp(q.start), stop: parseTimestamp(q.stop), revealStart: parseTimestamp(q.revealStart ?? q.stop) }; }
 
   function openQuestion(index) {
-    stopPlayback(); activeIndex = index; answerRevealed = false;
+    stopPlayback(); activeIndex = index; answerRevealed = false; pendingAwards = game.teams.map(() => 0);
     const q = quiz.questions[index]; const { start, stop } = questionTimes(q);
     $("questionCategory").textContent = q.category; $("questionPoints").textContent = `${q.points} points`;
     $("questionPrompt").textContent = q.question || "Listen to the music clip.";
     $("questionInstruction").textContent = q.category === "First Words" ? "Listen to the intro, then guess the first words sung." : q.category === "Finish the Lyrics" ? "Continue the lyric after the clip stops." : "Listen carefully and give your answer.";
-    $("clipRange").textContent = Number.isFinite(start) && Number.isFinite(stop) ? `${formatTimestamp(start)} → ${formatTimestamp(stop)}` : "Timestamps need attention";
+    $("clipRange").textContent = Number.isFinite(start) && Number.isFinite(stop) ? `Clip ${formatTimestamp(start)} → ${formatTimestamp(stop)} · Reveal from ${formatTimestamp(questionTimes(q).revealStart)}` : "Timestamps need attention";
     $("answerLabel").textContent = q.category === "First Words" ? "First words" : "Answer";
     $("answerText").textContent = q.answer || "No answer configured";
     $("songInfo").textContent = [q.artist, q.song].filter(Boolean).join(" — ") || "No song details configured";
@@ -184,6 +187,7 @@
     if (!extractYouTubeId(q.youtube)) return "This question has an invalid YouTube URL.";
     const { start, stop } = questionTimes(q);
     if (!Number.isFinite(start) || !Number.isFinite(stop) || stop <= start) return "The stop time must be later than the start time.";
+    if (!Number.isFinite(questionTimes(q).revealStart)) return "The reveal start time is invalid.";
     return "Ready.";
   }
 
@@ -197,6 +201,7 @@
         onReady: () => setStatus("Ready."), onError: handlePlayerError,
         onStateChange: (event) => {
           setPlayButton(event.data === YT.PlayerState.PLAYING);
+          if (event.data === YT.PlayerState.PLAYING && Number.isFinite(segmentEnd)) startMonitor(segmentEnd);
           if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) clearMonitor();
         }
       }});
@@ -220,7 +225,7 @@
     $("playButton").textContent = isPlaying ? "Ⅱ" : "▶";
     $("playButton").setAttribute("aria-label", isPlaying ? "Pause clip" : "Play clip");
   }
-  function stopPlayback() { clearMonitor(); if (player && typeof player.pauseVideo === "function") player.pauseVideo(); setPlayButton(false); }
+  function stopPlayback() { clearMonitor(); segmentEnd = null; if (player && typeof player.pauseVideo === "function") player.pauseVideo(); setPlayButton(false); }
 
   function playSegment(mode = "clip") {
     if (activeIndex === null) return;
@@ -228,9 +233,9 @@
     if (!id || !Number.isFinite(times.start) || !Number.isFinite(times.stop) || times.stop <= times.start) { setStatus(questionWarning(q), true); return; }
     if (!apiReady) { setStatus("The YouTube API is still loading. Check your connection and try again.", true); return; }
     if (!player || typeof player.loadVideoById !== "function") { ensureGamePlayer(); setStatus("Preparing the player…"); return; }
-    const start = mode === "answer" ? times.stop : times.start;
-    const end = mode === "answer" ? times.stop + (Number(q.answerPlaybackDuration) || 8) : times.stop;
-    player.loadVideoById({ videoId: id, startSeconds: start }); player.playVideo(); startMonitor(end);
+    const start = mode === "answer" ? times.revealStart : times.start;
+    const end = mode === "answer" ? times.revealStart + (Number(q.answerPlaybackDuration) || 8) : times.stop;
+    segmentEnd = end; clearMonitor(); player.loadVideoById({ videoId: id, startSeconds: start }); player.playVideo();
     setStatus(mode === "answer" ? `Playing the answer from ${formatTimestamp(start)} for about ${q.answerPlaybackDuration || 8} seconds.` : `Playing ${formatTimestamp(start)} → ${formatTimestamp(end)}.`);
   }
 
@@ -241,29 +246,35 @@
     const times = q ? questionTimes(q) : null;
     const current = Number(player.getCurrentTime());
     if (times && current >= times.start && current < times.stop) {
-      player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
+      segmentEnd = times.stop; player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
     } else playSegment();
   }
 
   function revealAnswer() {
     if (activeIndex === null || answerRevealed) return; answerRevealed = true;
     $("answerCard").hidden = false; $("revealButton").hidden = true; $("answerCard").classList.add("reveal");
-    window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450); $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450); playSegment("answer"); $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   function renderScoreButtons() {
-    if (activeIndex === null) return; const value = Number(quiz.questions[activeIndex].points) || 0; const holder = $("scoreButtons"); holder.replaceChildren();
+    if (activeIndex === null) return; const holder = $("scoreButtons"); holder.replaceChildren();
+    while (pendingAwards.length < game.teams.length) pendingAwards.push(0);
     game.teams.forEach((team, index) => {
-      [[1, "+", "positive"], [-1, "−", "negative"]].forEach(([sign, symbol, className]) => {
-        const button = document.createElement("button"); button.type = "button"; button.className = `button score-action ${className}`;
-        button.textContent = `${team.name || `Team ${index + 1}`} ${symbol}${value}`; button.addEventListener("click", () => finishQuestion(index, sign)); holder.append(button);
-      });
+      const row = document.createElement("div"); row.className = "team-award-row";
+      const name = document.createElement("strong"); name.textContent = team.name || `Team ${index + 1}`; row.append(name);
+      const choices = document.createElement("div"); choices.className = "point-choices";
+      for (let points = 0; points <= 5; points += 1) {
+        const button = document.createElement("button"); button.type = "button"; button.className = "point-choice";
+        button.classList.toggle("selected", pendingAwards[index] === points); button.textContent = points; button.setAttribute("aria-label", `Give ${name.textContent} ${points} points`);
+        button.addEventListener("click", () => { pendingAwards[index] = points; renderScoreButtons(); }); choices.append(button);
+      }
+      row.append(choices); holder.append(row);
     });
   }
 
-  function finishQuestion(teamIndex, sign) {
+  function finishQuestion(useAwards = true) {
     if (activeIndex === null) return;
-    if (teamIndex !== null) game.teams[teamIndex].score += Number(quiz.questions[activeIndex].points) * sign;
+    if (useAwards) game.teams.forEach((team, index) => { team.score += Number(pendingAwards[index]) || 0; });
     if (!game.completed.includes(activeIndex)) game.completed.push(activeIndex); saveGame(); closeQuestion(); render();
   }
 
@@ -289,7 +300,7 @@
     renderEditorList(); loadEditorQuestion(); showView("editor");
   }
 
-  const editorFields = { category: "editCategory", points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
+  const editorFields = { category: "editCategory", points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", revealStart: "editRevealStart", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
   function syncEditorQuestion() {
     if (!editorDraft?.questions[editorIndex]) return;
     const q = editorDraft.questions[editorIndex]; Object.entries(editorFields).forEach(([key, id]) => { q[key] = key === "points" || key === "answerPlaybackDuration" ? Number($(id).value) : $(id).value; });
@@ -360,11 +371,11 @@
 
   listen("playButton", "click", togglePlay); listen("stopButton", "click", () => { stopPlayback(); setStatus("Stopped."); });
   listen("restartButton", "click", () => playSegment()); listen("revealButton", "click", revealAnswer); listen("playAnswerButton", "click", () => playSegment("answer"));
-  listen("backButton", "click", closeQuestion); listen("noPointsButton", "click", () => finishQuestion(null, 0));
+  listen("backButton", "click", closeQuestion); listen("noPointsButton", "click", () => finishQuestion(false)); listen("awardPointsButton", "click", () => finishQuestion(true));
   listen("resetButton", "click", resetGame); listen("settingsButton", "click", openEditor);
   listen("teamCount", "change", (event) => setTeamCount(event.target.value));
   listen("editorForm", "submit", saveEditor); listen("cancelEditorButton", "click", closeEditor); listen("discardEditorButton", "click", closeEditor);
-  listen("loadEditorVideo", "click", loadEditorVideo); listen("setStartButton", "click", () => captureTimestamp("editStart")); listen("setStopButton", "click", () => captureTimestamp("editStop"));
+  listen("loadEditorVideo", "click", loadEditorVideo); listen("setStartButton", "click", () => captureTimestamp("editStart")); listen("setStopButton", "click", () => captureTimestamp("editStop")); listen("setRevealStartButton", "click", () => captureTimestamp("editRevealStart"));
   listen("exportButton", "click", exportQuiz); listen("importButton", "click", () => $("importFile")?.click()); listen("importFile", "change", (event) => importQuiz(event.target.files[0]));
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) || event.target.isContentEditable || !$("editorView").hidden) return;

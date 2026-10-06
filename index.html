@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070b16">
   <title>Weekend Music Quiz</title>
-  <link rel="stylesheet" href="style.css?v=20261006-2">
+  <link rel="stylesheet" href="style.css?v=20261006-3">
 </head>
 <body>
   <div class="app-shell">
@@ -28,7 +28,7 @@
         <div class="answer-card" id="answerCard" hidden>
           <p class="answer-label" id="answerLabel">Answer</p><div class="answer-text" id="answerText"></div><div class="song-info" id="songInfo"></div>
           <div class="answer-actions"><button class="button gold" id="playAnswerButton" type="button">▶ Play answer</button></div>
-          <div class="scoring"><p>Award the question</p><div class="score-buttons" id="scoreButtons"></div><button class="button ghost no-points" id="noPointsButton" type="button">No points / close question</button></div>
+          <div class="scoring"><p>Choose 0–5 points for every team</p><div class="score-buttons" id="scoreButtons"></div><div class="scoring-actions"><button class="button ghost" id="noPointsButton" type="button">Close with 0 points</button><button class="button gold" id="awardPointsButton" type="button">Apply points &amp; close</button></div></div>
         </div>
       </section>
       <section class="editor-view" id="editorView" hidden>
@@ -41,11 +41,11 @@
             <div class="question-editor" id="questionEditor">
               <div class="form-grid">
                 <label class="field"><span>Category</span><input id="editCategory" required></label><label class="field"><span>Points</span><input id="editPoints" type="number" min="0" step="1" required></label>
-                <label class="field full"><span>YouTube URL</span><input id="editYoutube" type="url" placeholder="https://www.youtube.com/watch?v=…"></label><label class="field"><span>Start time</span><input id="editStart" placeholder="0 or 1:23.5"></label><label class="field"><span>Stop time</span><input id="editStop" placeholder="15 or 1:38.5"></label>
+                <label class="field full"><span>YouTube URL</span><input id="editYoutube" type="url" placeholder="https://www.youtube.com/watch?v=…"></label><label class="field"><span>Clip start (MM:SS)</span><input id="editStart" placeholder="0:00"></label><label class="field"><span>Clip stop (MM:SS)</span><input id="editStop" placeholder="0:12"></label><label class="field"><span>Reveal start (MM:SS)</span><input id="editRevealStart" placeholder="0:12"></label>
                 <label class="field full"><span>Question / instruction</span><textarea id="editQuestion" rows="2" required></textarea></label><label class="field full"><span>Answer</span><textarea id="editAnswer" rows="2"></textarea></label>
                 <label class="field"><span>Song</span><input id="editSong"></label><label class="field"><span>Artist</span><input id="editArtist"></label><label class="field"><span>Answer playback duration (seconds)</span><input id="editAnswerDuration" type="number" min="1" max="60" step="0.5"></label>
               </div>
-              <div class="timestamp-tool"><div class="tool-heading"><div><strong>Timestamp helper</strong><p>Load the video, scrub to a moment, then capture it.</p></div><button class="button" id="loadEditorVideo" type="button">Load video</button></div><div class="editor-player"><div id="editorYoutubePlayer"></div></div><div class="timestamp-actions"><button class="button" id="setStartButton" type="button">Set start to current time</button><button class="button" id="setStopButton" type="button">Set stop to current time</button><span id="timestampReadout">0 seconds · 0:00</span></div><p class="status" id="editorStatus" role="status"></p></div>
+              <div class="timestamp-tool"><div class="tool-heading"><div><strong>Timestamp helper</strong><p>Load the video, scrub to a moment, then capture it.</p></div><button class="button" id="loadEditorVideo" type="button">Load video</button></div><div class="editor-player"><div id="editorYoutubePlayer"></div></div><div class="timestamp-actions"><button class="button" id="setStartButton" type="button">Set clip start</button><button class="button" id="setStopButton" type="button">Set clip stop</button><button class="button" id="setRevealStartButton" type="button">Set reveal start</button><span id="timestampReadout">0 seconds · 0:00</span></div><p class="status" id="editorStatus" role="status"></p></div>
             </div>
           </div>
           <div class="editor-footer"><button class="button ghost" id="discardEditorButton" type="button">Cancel changes</button><button class="button gold" type="submit">Save quiz</button></div>
@@ -54,6 +54,6 @@
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://www.youtube.com/iframe_api"></script><script src="quiz-data.js?v=20261006-2"></script><script src="app.js?v=20261006-2"></script>
+  <script src="https://www.youtube.com/iframe_api"></script><script src="quiz-data.js?v=20261006-3"></script><script src="app.js?v=20261006-3"></script>
 </body>
 </html>

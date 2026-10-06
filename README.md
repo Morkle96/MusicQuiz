@@ -36,6 +36,7 @@ Example question:
   youtube: "https://www.youtube.com/watch?v=VIDEO_ID",
   start: 0,
   stop: "0:18.3",
+  revealStart: "0:18.3",
   question: "What are the first words?",
   answer: "Hello, it's me",
   song: "Hello",
@@ -48,9 +49,9 @@ Example question:
 
 Paste normal `youtube.com/watch`, `youtu.be`, `youtube.com/shorts`, or `youtube.com/embed` URLs. The video ID is extracted automatically. A video must allow embedding; private, removed, age-restricted, region-blocked, or embedding-disabled videos may not play.
 
-Start and stop times can be seconds (`83.5`) or readable timestamps (`"1:23.5"`). Supported examples include `0:15`, `1:23`, `1:23.5`, and `2:05`. The app checks the player's current playback time about every 75 ms and pauses at the cutoff, avoiding timer drift caused by buffering.
+Clip start, clip stop, and reveal start can be seconds (`83.5`) or readable `MM:SS` timestamps (`"1:23.5"`). For a twelve-second clip, use start `0:00` and stop `0:12` (not `12:00`, which means twelve minutes). The app checks the player's current playback time about every 75 ms and pauses at the cutoff, avoiding timer drift caused by buffering. Revealing the answer starts playback at `revealStart` for `answerPlaybackDuration` seconds.
 
-The editor's timestamp helper can load the question's video. Play or scrub using the YouTube controls, then choose **Set start to current time** or **Set stop to current time**. It displays both seconds and `MM:SS.s`.
+The editor's timestamp helper can load the question's video. Play or scrub using the YouTube controls, then capture the clip start, clip stop, or reveal start. It displays both seconds and `MM:SS.s`.
 
 ## Import and export
 
@@ -58,7 +59,7 @@ In the editor, **Export quiz** downloads the current draft as JSON. **Import qui
 
 ## First Words and Finish the Lyrics
 
-For **First Words**, make the normal clip end immediately before the opening vocal. For **Finish the Lyrics**, end immediately before the lyric contestants must continue. After revealing the answer, **Play answer** starts at the configured cutoff and plays for `answerPlaybackDuration` seconds (8 by default).
+For **First Words**, make the normal clip end immediately before the opening vocal. For **Finish the Lyrics**, end immediately before the lyric contestants must continue. Set `revealStart` where the answer begins. Revealing the answer immediately plays from that point for `answerPlaybackDuration` seconds (8 by default); **Play answer** repeats it.
 
 ## Keyboard shortcuts
 
@@ -67,7 +68,7 @@ For **First Words**, make the normal clip end immediately before the opening voc
 - `A`: reveal the answer
 - `Esc`: return to the board without marking the question complete
 
-Shortcuts are ignored while typing in the editor or a team-name field. Returning to the board keeps a question available; only a scoring button or **No points / close question** completes it.
+Shortcuts are ignored while typing in the editor or a team-name field. Returning to the board keeps a question available. After revealing, choose 0–5 points independently for every team, then apply the points and close the question.
 
 ## Reset and troubleshooting
 
