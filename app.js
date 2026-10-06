@@ -179,7 +179,7 @@
     $("answerLabel").textContent = q.category === "First Words" ? "First words" : "Answer";
     $("answerText").textContent = q.answer || "No answer configured";
     $("songInfo").textContent = [q.artist, q.song].filter(Boolean).join(" — ") || "No song details configured";
-    $("answerCard").hidden = true; $("revealButton").hidden = false;
+    $("answerCard").hidden = true; $("scoringPanel").hidden = true; $("revealButton").hidden = false;
     $("playerCard").classList.toggle("video-concealed", q.hiddenVideo === true);
     setStatus(questionWarning(q)); renderScoreButtons(); showView("question"); ensureGamePlayer();
   }
@@ -254,7 +254,7 @@
 
   function revealAnswer() {
     if (activeIndex === null || answerRevealed) return; answerRevealed = true;
-    $("answerCard").hidden = false; $("revealButton").hidden = true; $("answerCard").classList.add("reveal");
+    $("answerCard").hidden = false; $("scoringPanel").hidden = false; $("revealButton").hidden = true; $("answerCard").classList.add("reveal");
     $("playerCard").classList.remove("video-concealed");
     window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450); playSegment("answer"); $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
