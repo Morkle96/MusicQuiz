@@ -72,7 +72,7 @@
     normalized.title = String(normalized.title || "Music Quiz").trim();
     normalized.questions = normalized.questions.map((q) => ({
       category: String(q.category || "Uncategorized").trim(),
-      points: Number(q.points), youtube: String(q.youtube || "").trim(),
+      points: String(q.points ?? "").trim(), youtube: String(q.youtube || "").trim(),
       start: q.start ?? 0, stop: q.stop ?? 10, revealStart: q.revealStart ?? q.stop ?? 10,
       question: String(q.question || "Listen to the music clip."),
       answer: String(q.answer || ""), song: String(q.song || ""), artist: String(q.artist || ""),
@@ -92,7 +92,7 @@
     for (let i = 0; i < data.questions.length; i += 1) {
       const q = data.questions[i];
       if (!q || typeof q !== "object" || !String(q.category || "").trim()) return `Question ${i + 1} needs a category.`;
-      if (!Number.isFinite(Number(q.points)) || Number(q.points) < 0) return `Question ${i + 1} has invalid points.`;
+      if ((typeof q.points !== "string" && typeof q.points !== "number") || !String(q.points).trim()) return `Question ${i + 1} needs a difficulty label.`;
       const start = parseTimestamp(q.start), stop = parseTimestamp(q.stop);
       if (!Number.isFinite(start) || !Number.isFinite(stop) || stop <= start) return `Question ${i + 1} needs a valid stop time after its start time.`;
       if (!Number.isFinite(parseTimestamp(q.revealStart ?? q.stop))) return `Question ${i + 1} needs a valid reveal start time.`;
@@ -149,13 +149,13 @@
     const board = $("board"); board.replaceChildren();
     board.style.setProperty("--columns", quiz.categories.length);
     quiz.categories.forEach((category) => { const header = document.createElement("div"); header.className = "category-header"; header.textContent = category; board.append(header); });
-    const values = [...new Set(quiz.questions.map((q) => Number(q.points)))].sort((a, b) => a - b);
+    const values = [...new Set(quiz.questions.map((q) => String(q.points)))];
     values.forEach((points) => quiz.categories.forEach((category) => {
-      const index = quiz.questions.findIndex((q) => q.category === category && Number(q.points) === points);
+      const index = quiz.questions.findIndex((q) => q.category === category && String(q.points) === points);
       if (index < 0) { const gap = document.createElement("div"); gap.className = "tile gap"; board.append(gap); return; }
       const button = document.createElement("button"); const completed = game.completed.includes(index);
       button.type = "button"; button.className = "tile"; button.disabled = completed;
-      button.textContent = completed ? "✓" : points; button.setAttribute("aria-label", `${category} for ${points} points${completed ? ", completed" : ""}`);
+      button.textContent = completed ? "✓" : points; button.setAttribute("aria-label", `${category}, difficulty ${points}${completed ? ", completed" : ""}`);
       button.addEventListener("click", () => openQuestion(index)); board.append(button);
     }));
   }
@@ -171,7 +171,7 @@
   function openQuestion(index) {
     stopPlayback(); activeIndex = index; answerRevealed = false; pendingAwards = game.teams.map(() => 0);
     const q = quiz.questions[index]; const { start, stop } = questionTimes(q);
-    $("questionCategory").textContent = q.category; $("questionPoints").textContent = `${q.points} points`;
+    $("questionCategory").textContent = q.category; $("questionPoints").textContent = `Difficulty · ${q.points}`;
     $("questionPrompt").textContent = q.question || "Listen to the music clip.";
     $("questionInstruction").textContent = q.category === "First Words" ? "Listen to the intro, then guess the first words sung." : q.category === "Finish the Lyrics" ? "Continue the lyric after the clip stops." : "Listen carefully and give your answer.";
     $("clipRange").textContent = Number.isFinite(start) && Number.isFinite(stop) ? `Clip ${formatTimestamp(start)} → ${formatTimestamp(stop)} · Reveal from ${formatTimestamp(questionTimes(q).revealStart)}` : "Timestamps need attention";
@@ -303,7 +303,7 @@
   const editorFields = { category: "editCategory", points: "editPoints", youtube: "editYoutube", start: "editStart", stop: "editStop", revealStart: "editRevealStart", question: "editQuestion", answer: "editAnswer", song: "editSong", artist: "editArtist", answerPlaybackDuration: "editAnswerDuration" };
   function syncEditorQuestion() {
     if (!editorDraft?.questions[editorIndex]) return;
-    const q = editorDraft.questions[editorIndex]; Object.entries(editorFields).forEach(([key, id]) => { q[key] = key === "points" || key === "answerPlaybackDuration" ? Number($(id).value) : $(id).value; });
+    const q = editorDraft.questions[editorIndex]; Object.entries(editorFields).forEach(([key, id]) => { q[key] = key === "answerPlaybackDuration" ? Number($(id).value) : $(id).value; });
     editorDraft.title = $("editorTitle").value;
   }
 
@@ -317,7 +317,7 @@
   function renderEditorList() {
     const list = $("editorQuestionList"); list.replaceChildren(...editorDraft.questions.map((q, index) => {
       const button = document.createElement("button"); button.type = "button"; button.className = "editor-question";
-      button.innerHTML = `<span>${escapeHtml(q.category)}</span><strong>${Number(q.points) || 0}</strong>`;
+      button.innerHTML = `<span>${escapeHtml(q.category)}</span><strong>${escapeHtml(q.points)}</strong>`;
       button.addEventListener("click", () => { syncEditorQuestion(); editorIndex = index; renderEditorList(); loadEditorQuestion(); }); return button;
     }));
   }
@@ -371,7 +371,7 @@
 
   listen("playButton", "click", togglePlay); listen("stopButton", "click", () => { stopPlayback(); setStatus("Stopped."); });
   listen("restartButton", "click", () => playSegment()); listen("revealButton", "click", revealAnswer); listen("playAnswerButton", "click", () => playSegment("answer"));
-  listen("backButton", "click", closeQuestion); listen("noPointsButton", "click", () => finishQuestion(false)); listen("awardPointsButton", "click", () => finishQuestion(true));
+  listen("backButton", "click", closeQuestion); listen("noPointsButton", "click", () => { pendingAwards = game.teams.map(() => 0); renderScoreButtons(); }); listen("awardPointsButton", "click", () => finishQuestion(true));
   listen("resetButton", "click", resetGame); listen("settingsButton", "click", openEditor);
   listen("teamCount", "change", (event) => setTeamCount(event.target.value));
   listen("editorForm", "submit", saveEditor); listen("cancelEditorButton", "click", closeEditor); listen("discardEditorButton", "click", closeEditor);

@@ -72,7 +72,7 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .clip-details { display: flex; justify-content: space-between; gap: 16px; width: min(100%, 1120px); min-height: 22px; margin: 9px auto 0; color: var(--muted); font-size: .82rem; }
 .status { margin: 0; color: var(--muted); font-size: .82rem; text-align: right; }
 .status.error { color: var(--red); }
-.primary-controls { position: relative; display: flex; justify-content: center; align-items: center; width: min(100%, 1120px); min-height: 88px; margin: 8px auto 0; }
+.primary-controls { position: relative; display: flex; justify-content: center; align-items: center; width: min(100%, 1120px); min-height: 88px; margin: 0 auto 10px; }
 .transport-controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
 .transport-button { display: grid; place-items: center; width: 48px; height: 48px; border: 0; border-radius: 50%; padding: 0; background: transparent; color: #c6cede; font-size: 1.65rem; cursor: pointer; transition: color .15s ease, transform .15s ease, background .15s ease; }
 .transport-button:hover { color: #fff; transform: scale(1.08); }
@@ -148,8 +148,8 @@ kbd { min-width: 25px; border: 1px solid var(--line); border-bottom-width: 2px; 
   .team-card { min-height: 74px; }
   .form-grid { grid-template-columns: 1fr; }
   .field.full { grid-column: auto; }
-  .primary-controls { padding-bottom: 74px; }
-  .reveal-button { right: auto; bottom: 4px; width: 100%; }
+  .primary-controls { padding-bottom: 68px; }
+  .reveal-button { right: auto; bottom: 0; width: 100%; }
   .player-card { border-radius: 14px; }
   .clip-details { flex-direction: column; gap: 3px; }
   .status { text-align: left; }

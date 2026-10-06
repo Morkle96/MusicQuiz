@@ -10,7 +10,7 @@ Serve this folder through a small local web server (opening `index.html` directl
 python -m http.server 8000
 ```
 
-Then open `http://localhost:8000`. An internet connection is required for the YouTube IFrame Player API and videos. Click a point value, use the video controls, reveal the answer, and award or deduct points. Team names, scores, completed questions, team count, and editor changes are saved in the browser.
+Then open `http://localhost:8000`. An internet connection is required for the YouTube IFrame Player API and videos. Click a difficulty tile, use the video controls, reveal the answer, choose 0–5 points for every team, and press **Done**. Team names, scores, completed questions, team count, and editor changes are saved in the browser.
 
 ## Deploy to GitHub Pages
 
@@ -32,7 +32,7 @@ Example question:
 ```js
 {
   category: "First Words",
-  points: 100,
+  points: "Easy",
   youtube: "https://www.youtube.com/watch?v=VIDEO_ID",
   start: 0,
   stop: "0:18.3",
@@ -50,6 +50,8 @@ Example question:
 Paste normal `youtube.com/watch`, `youtu.be`, `youtube.com/shorts`, or `youtube.com/embed` URLs. The video ID is extracted automatically. A video must allow embedding; private, removed, age-restricted, region-blocked, or embedding-disabled videos may not play.
 
 Clip start, clip stop, and reveal start can be seconds (`83.5`) or readable `MM:SS` timestamps (`"1:23.5"`). For a twelve-second clip, use start `0:00` and stop `0:12` (not `12:00`, which means twelve minutes). The app checks the player's current playback time about every 75 ms and pauses at the cutoff, avoiding timer drift caused by buffering. Revealing the answer starts playback at `revealStart` for `answerPlaybackDuration` seconds.
+
+The `points` field is only the board's difficulty label. It may contain a number such as `100` or text such as `Easy`, `Hard`, or `Final`. Actual team scoring is always selected separately from 0 to 5 after revealing an answer.
 
 The editor's timestamp helper can load the question's video. Play or scrub using the YouTube controls, then capture the clip start, clip stop, or reveal start. It displays both seconds and `MM:SS.s`.
 
