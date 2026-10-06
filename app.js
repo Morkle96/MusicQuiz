@@ -76,7 +76,8 @@
       start: q.start ?? 0, stop: q.stop ?? 10, revealStart: q.revealStart ?? q.stop ?? 10,
       question: String(q.question || "Listen to the music clip."),
       answer: String(q.answer || ""), song: String(q.song || ""), artist: String(q.artist || ""),
-      answerPlaybackDuration: Number(q.answerPlaybackDuration) || 8
+      answerPlaybackDuration: Number(q.answerPlaybackDuration) || 8,
+      hiddenVideo: typeof q.hiddenVideo === "boolean" ? q.hiddenVideo : String(q.category) === "Who's Singing?"
     }));
     normalized.categories = [...new Set([
       ...(Array.isArray(normalized.categories) ? normalized.categories.map(String) : []),
@@ -107,7 +108,7 @@
   }
 
   function quizSignature() {
-    return JSON.stringify(quiz.questions.map((q) => [q.category, q.points, q.youtube, q.start, q.stop, q.revealStart]));
+    return JSON.stringify(quiz.questions.map((q) => [q.category, q.points, q.youtube, q.start, q.stop, q.revealStart, q.hiddenVideo]));
   }
 
   function loadGame() {
@@ -179,6 +180,7 @@
     $("answerText").textContent = q.answer || "No answer configured";
     $("songInfo").textContent = [q.artist, q.song].filter(Boolean).join(" — ") || "No song details configured";
     $("answerCard").hidden = true; $("revealButton").hidden = false;
+    $("playerCard").classList.toggle("video-concealed", q.hiddenVideo === true);
     setStatus(questionWarning(q)); renderScoreButtons(); showView("question"); ensureGamePlayer();
   }
 
@@ -253,6 +255,7 @@
   function revealAnswer() {
     if (activeIndex === null || answerRevealed) return; answerRevealed = true;
     $("answerCard").hidden = false; $("revealButton").hidden = true; $("answerCard").classList.add("reveal");
+    $("playerCard").classList.remove("video-concealed");
     window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450); playSegment("answer"); $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -304,12 +307,14 @@
   function syncEditorQuestion() {
     if (!editorDraft?.questions[editorIndex]) return;
     const q = editorDraft.questions[editorIndex]; Object.entries(editorFields).forEach(([key, id]) => { q[key] = key === "answerPlaybackDuration" ? Number($(id).value) : $(id).value; });
+    q.hiddenVideo = $("editHiddenVideo").checked;
     editorDraft.title = $("editorTitle").value;
   }
 
   function loadEditorQuestion() {
     const q = editorDraft.questions[editorIndex]; if (!q) return;
     Object.entries(editorFields).forEach(([key, id]) => { $(id).value = q[key] ?? ""; });
+    $("editHiddenVideo").checked = q.hiddenVideo === true;
     $("editorStatus").textContent = ""; $("editorStatus").classList.remove("error"); updateTimestampReadout(0);
     [...$("editorQuestionList").children].forEach((node, i) => node.classList.toggle("selected", i === editorIndex));
   }
