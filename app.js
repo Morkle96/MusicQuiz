@@ -27,6 +27,7 @@
   let metadataTarget = null;
   let segmentStart = null;
   let segmentEnd = null;
+  let pendingPresentation = null;
   let pendingAwards = [];
 
   window.onYouTubeIframeAPIReady = () => {
@@ -218,7 +219,7 @@
   function questionTimes(q) { return { start: parseTimestamp(q.start), stop: parseTimestamp(q.stop), revealStart: parseTimestamp(q.revealStart ?? q.stop) }; }
 
   function openQuestion(index) {
-    stopPlayback(); activeIndex = index; answerRevealed = false; pendingAwards = game.teams.map(() => 0);
+    stopPlayback(); activeIndex = index; answerRevealed = false; pendingPresentation = null; pendingAwards = game.teams.map(() => 0);
     const q = quiz.questions[index]; const { start, stop } = questionTimes(q); updateClipProgress(start, start, stop);
     const questionNumber = quiz.questions.filter((item, itemIndex) => item.category === q.category && itemIndex <= index).length;
     $("questionCategory").textContent = q.category; $("questionPoints").textContent = `Question ${questionNumber}`;
@@ -230,7 +231,7 @@
     $("songInfo").textContent = [q.artist, q.song].filter(Boolean).join(" — ") || "No song details configured";
     $("answerCard").hidden = true; $("scoringPanel").hidden = true; $("revealButton").hidden = false;
     $("playerCard").classList.toggle("video-concealed", q.hiddenVideo === true);
-    $("playerCard").classList.add("awaiting-play");
+    $("playerCard").classList.add("awaiting-play", "question-copy-pending");
     setStatus(questionWarning(q)); renderScoreButtons(); showView("question"); ensureGamePlayer();
   }
 
@@ -253,7 +254,10 @@
         onReady: () => { const iframe = player.getIframe(); iframe.setAttribute("tabindex", "-1"); setStatus("Ready."); }, onError: handlePlayerError,
         onStateChange: (event) => {
           setPlayButton(event.data === YT.PlayerState.PLAYING);
-          if (event.data === YT.PlayerState.PLAYING && Number.isFinite(segmentEnd)) startMonitor(segmentEnd);
+          if (event.data === YT.PlayerState.PLAYING) {
+            presentPlaybackContent();
+            if (Number.isFinite(segmentEnd)) startMonitor(segmentEnd);
+          }
           if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) clearMonitor();
         }
       }});
@@ -262,6 +266,8 @@
 
   function handlePlayerError(event) {
     const messages = { 2: "The YouTube URL is invalid.", 5: "This video cannot play in the HTML5 player.", 100: "This video is private, removed, or unavailable.", 101: "The owner does not allow this video to be embedded.", 150: "The owner does not allow this video to be embedded." };
+    if (pendingPresentation === "answer") { answerRevealed = false; $("revealButton").hidden = false; }
+    pendingPresentation = null;
     setStatus(messages[event.data] || "YouTube could not play this video.", true); clearMonitor();
   }
 
@@ -286,19 +292,32 @@
     $("playButton").textContent = isPlaying ? "Ⅱ" : "▶";
     $("playButton").setAttribute("aria-label", isPlaying ? "Pause clip" : "Play clip");
   }
+  function presentPlaybackContent() {
+    if (pendingPresentation === "clip") {
+      $("playerCard").classList.remove("awaiting-play", "question-copy-pending");
+    } else if (pendingPresentation === "answer") {
+      $("answerCard").hidden = false; $("scoringPanel").hidden = false;
+      $("playerCard").classList.remove("video-concealed", "awaiting-play");
+      $("answerCard").classList.add("reveal");
+      window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450);
+      $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    pendingPresentation = null;
+  }
   function stopPlayback() { clearMonitor(); segmentStart = null; segmentEnd = null; if (player && typeof player.pauseVideo === "function") player.pauseVideo(); setPlayButton(false); }
 
   function playSegment(mode = "clip") {
-    if (activeIndex === null) return;
+    if (activeIndex === null) return false;
     const q = quiz.questions[activeIndex], id = extractYouTubeId(q.youtube), times = questionTimes(q);
-    if (!id || !Number.isFinite(times.start) || !Number.isFinite(times.stop) || times.stop <= times.start) { setStatus(questionWarning(q), true); return; }
-    if (!apiReady) { setStatus("The YouTube API is still loading. Check your connection and try again.", true); return; }
-    if (!player || typeof player.loadVideoById !== "function") { ensureGamePlayer(); setStatus("Preparing the player…"); return; }
-    $("playerCard").classList.remove("awaiting-play");
+    if (!id || !Number.isFinite(times.start) || !Number.isFinite(times.stop) || times.stop <= times.start) { setStatus(questionWarning(q), true); return false; }
+    if (!apiReady) { setStatus("The YouTube API is still loading. Check your connection and try again.", true); return false; }
+    if (!player || typeof player.loadVideoById !== "function") { ensureGamePlayer(); setStatus("Preparing the player…"); return false; }
     const start = mode === "answer" ? times.revealStart : times.start;
     const end = mode === "answer" ? times.revealStart + (Number(q.answerPlaybackDuration) || 8) : times.stop;
+    pendingPresentation = mode;
     segmentStart = start; segmentEnd = end; updateClipProgress(start, start, end); clearMonitor(); player.loadVideoById({ videoId: id, startSeconds: start }); player.playVideo();
     setStatus(mode === "answer" ? `Playing the answer from ${formatTimestamp(start)} for about ${q.answerPlaybackDuration || 8} seconds.` : `Playing ${formatTimestamp(start)} → ${formatTimestamp(end)}.`);
+    return true;
   }
 
   function togglePlay() {
@@ -308,15 +327,16 @@
     const times = q ? questionTimes(q) : null;
     const current = Number(player.getCurrentTime());
     if (times && current >= times.start && current < times.stop) {
-      $("playerCard").classList.remove("awaiting-play"); segmentStart = times.start; segmentEnd = times.stop; player.playVideo(); startMonitor(times.stop); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
+      pendingPresentation = $("playerCard").classList.contains("question-copy-pending") ? "clip" : null;
+      segmentStart = times.start; segmentEnd = times.stop; player.playVideo(); setStatus(`Resumed. Clip stops at ${formatTimestamp(times.stop)}.`);
     } else playSegment();
   }
 
   function revealAnswer() {
-    if (activeIndex === null || answerRevealed) return; answerRevealed = true;
-    $("answerCard").hidden = false; $("scoringPanel").hidden = false; $("revealButton").hidden = true; $("answerCard").classList.add("reveal");
-    $("playerCard").classList.remove("video-concealed", "awaiting-play");
-    window.setTimeout(() => $("answerCard").classList.remove("reveal"), 450); playSegment("answer"); $("answerCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (activeIndex === null || answerRevealed) return;
+    answerRevealed = true;
+    if (!playSegment("answer")) { answerRevealed = false; return; }
+    $("revealButton").hidden = true;
   }
 
   function renderScoreButtons() {
@@ -341,7 +361,7 @@
     if (!game.completed.includes(activeIndex)) game.completed.push(activeIndex); saveGame(); closeQuestion(); render();
   }
 
-  function closeQuestion() { stopPlayback(); activeIndex = null; answerRevealed = false; showView("board"); }
+  function closeQuestion() { stopPlayback(); activeIndex = null; answerRevealed = false; pendingPresentation = null; showView("board"); }
 
   function resetGame() {
     if (!window.confirm("Reset team names, scores, and every completed question?")) return;
